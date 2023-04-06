@@ -1,0 +1,20 @@
+# Don't check auto-generated stuff into git
+coverage
+build
+node_modules
+stats.json
+dist
+packages/example
+
+# Cruft
+.DS_Store
+npm-debug.log
+.idea
+
+package-lock.json
+
+__tests__/async-state
+
+.scannerwork
+memlab
+#packages/demo
