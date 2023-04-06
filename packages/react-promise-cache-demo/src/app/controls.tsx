@@ -1,6 +1,6 @@
 import {useParams} from "react-router-dom";
 import * as React from "react";
-import {evict} from "react-promise-cache";
+import {API} from "./api";
 
 export default function Controls({children}) {
   let params = useParams()
@@ -14,13 +14,17 @@ export default function Controls({children}) {
       {
         params?.userId && (
           <button onClick={() => {
-            evict(`/users/${params.userId}`);
-            evict(`/users/${params.userId}/posts`);
+            API.put(`/users/${params.userId}`, {username: "John Doe"})
           }}>
-            Invalidate user {params.userId} cache
+            Edit user {params.userId}
           </button>
         )
       }
+      <button onClick={() => {
+        API.post(`/users`, {username: "John Doe"})
+      }}>
+        Add a new user
+      </button>
       <hr/>
       <div key={index}>{children}</div>
     </div>
