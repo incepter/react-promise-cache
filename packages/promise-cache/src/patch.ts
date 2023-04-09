@@ -14,6 +14,72 @@ declare global {
   }
 }
 
+export function patchQuery<T, A extends unknown[]>(
+  fn: (...args: A) => Promise<T>,
+  getCacheArg: (...args: A) => string,
+): typeof fn {
+  if (isServer) {
+    return patchQueryInServer(fn, getCacheArg);
+  }
+  return patchQueryInClient(fn, getCacheArg);
+}
+
+function patchQueryInServer<T, A extends unknown[]>(
+  fn: (...args: A) => Promise<T>,
+  getCacheArg: (...args: A) => string,
+): typeof fn {
+  return fn; // todo: implement this
+}
+
+function patchQueryInClient<T, A extends unknown[]>(
+  fn: (...args: A) => Promise<T>,
+  getCacheArg: (...args: A) => string,
+): typeof fn {
+  return function constructPromise(...args: A) {
+    let cacheHash = getCacheArg.apply(null, args)
+    let hydratedData = getSavedHydratedDataForPromiseCacheEntry<T, any>(cacheHash)
+    if (hydratedData) {
+      let promise = bootPromiseFromState(cacheHash, hydratedData);
+      promiseCache.set(cacheHash, promise);
+      reverseCache.set(promise, createCache(cacheHash, promise, hydratedData));
+      return promise;
+    }
+
+    let cachedPromise = promiseCache.get(cacheHash);
+    if (cachedPromise) {
+      return cachedPromise;
+    }
+
+    let promise = fn.apply(null, args);
+    promiseCache.set(cacheHash, promise);
+    reverseCache.set(promise, createCache(cacheHash, promise));
+    return promise;
+  }
+}
+function bootPromiseFromState<T, E>(hash: string, state: PromiseState<T, E>) {
+  let promise: Promise<T>;
+  if (state.status === "fulfilled") {
+    promise = Promise.resolve(state.value)
+  } else {
+    promise = Promise.reject(state.reason)
+  }
+  return promise
+}
+
+export function patchMutation<T, A extends unknown[]>(
+  fn: (...args: A) => Promise<T>,
+  getCacheArg: (...args: A) => string,
+): typeof fn {
+  return function modifiedMutation(...args: A) {
+    let arg = getCacheArg.apply(null, args)
+    let promise = fn.apply(null, args)
+    return promise.then(result => {
+      evict(arg);
+      return result;
+    })
+  }
+}
+
 function createCache<T, E>(
   arg: string,
   promise: Promise<T>,
@@ -76,50 +142,4 @@ function getSavedHydratedDataForPromiseCacheEntry<T, E>(
     delete maybeWindow.__HYDRATED_PROMISE_CACHE__[arg]
   }
   return existing
-}
-
-export function patchQuery<T, A extends unknown[]>(
-  fn: (...args: A) => Promise<T>,
-  getCacheArg: (...args: A) => string,
-): typeof fn {
-  return function modifiedQuery(...args: A) {
-    let arg = getCacheArg.apply(null, args)
-    if (!isServer) {
-      let hydratedData = getSavedHydratedDataForPromiseCacheEntry<T, any>(arg)
-      if (hydratedData) {
-        let promise: Promise<T>;
-        if (hydratedData.status === "fulfilled") {
-          promise = Promise.resolve(hydratedData.value)
-        } else {
-          promise = Promise.reject(hydratedData.reason)
-        }
-        promiseCache.set(arg, promise)
-        reverseCache.set(promise, createCache(arg, promise, hydratedData))
-        return promise;
-      }
-    }
-    let cachedPromise = promiseCache.get(arg)
-    if (cachedPromise) {
-      return cachedPromise
-    }
-
-    let promise = fn.apply(null, args)
-    promiseCache.set(arg, promise)
-    reverseCache.set(promise, createCache(arg, promise))
-    return promise;
-  }
-}
-
-export function patchMutation<T, A extends unknown[]>(
-  fn: (...args: A) => Promise<T>,
-  getCacheArg: (...args: A) => string,
-): typeof fn {
-  return function modifiedMutation(...args: A) {
-    let arg = getCacheArg.apply(null, args)
-    let promise = fn.apply(null, args)
-    return promise.then(result => {
-      evict(arg);
-      return result;
-    })
-  }
 }
