@@ -94,18 +94,18 @@ importers:
       '@types/react-dom': ^18.0.11
       '@vitejs/plugin-react': ^3.1.0
       axios: ^1.3.4
-      react: ^18.2.0
-      react-dom: ^18.2.0
-      react-promise-cache: workspace:^0.0.1
+      react: 0.0.0-experimental-dd5365878-20230407
+      react-dom: 0.0.0-experimental-dd5365878-20230407
+      react-promise-cache: workspace:^0.0.2
       react-router-dom: 6.10.0
       typescript: 4.9.5
       vite: ^4.2.0
     dependencies:
       axios: 1.3.5
-      react: 18.2.0
-      react-dom: 18.2.0_react@18.2.0
+      react: 0.0.0-experimental-dd5365878-20230407
+      react-dom: 0.0.0-experimental-dd5365878-20230407_jqoigns5qx5cxf46dto4uwatxu
       react-promise-cache: link:../promise-cache
-      react-router-dom: 6.10.0_biqbaboplfbrettd7655fr4n2y
+      react-router-dom: 6.10.0_fy2hqqa2b5fx5whr7gh7olw5d4
     devDependencies:
       '@types/react': 18.0.33
       '@types/react-dom': 18.0.11
@@ -124,7 +124,7 @@ importers:
       next: 13.2.4
       react: 18.2.0
       react-dom: 18.2.0
-      react-promise-cache: workspace:^0.0.1
+      react-promise-cache: workspace:^0.0.2
       typescript: 5.0.3
     dependencies:
       '@types/node': 18.15.11
@@ -5851,6 +5851,16 @@ packages:
       safe-buffer: 5.2.1
     dev: true
 
+  /react-dom/0.0.0-experimental-dd5365878-20230407_jqoigns5qx5cxf46dto4uwatxu:
+    resolution: {integrity: sha512-1E0ePdD8P2OmqMqLSuSOtFjQpQ34f4N0ysXp3WGzLhuqyEEhRLoqhkFHefM2FqHwG7KllTTLslXPFRg1/HHeag==}
+    peerDependencies:
+      react: 0.0.0-experimental-dd5365878-20230407
+    dependencies:
+      loose-envify: 1.4.0
+      react: 0.0.0-experimental-dd5365878-20230407
+      scheduler: 0.0.0-experimental-dd5365878-20230407
+    dev: false
+
   /react-dom/18.2.0_react@18.2.0:
     resolution: {integrity: sha512-6IMTriUmvsjHUjNtEDudZfuDQUoWXVxKHhlEGSk81n4YFS+r/Kl99wXiwlVXtPBtJenozv2P+hxDsw9eA7Xo6g==}
     peerDependencies:
@@ -5886,7 +5896,7 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
-  /react-router-dom/6.10.0_biqbaboplfbrettd7655fr4n2y:
+  /react-router-dom/6.10.0_fy2hqqa2b5fx5whr7gh7olw5d4:
     resolution: {integrity: sha512-E5dfxRPuXKJqzwSe/qGcqdwa18QiWC6f3H3cWXM24qj4N0/beCIf/CWTipop2xm7mR0RCS99NnaqPNjHtrAzCg==}
     engines: {node: '>=14'}
     peerDependencies:
@@ -5894,19 +5904,19 @@ packages:
       react-dom: '>=16.8'
     dependencies:
       '@remix-run/router': 1.5.0
-      react: 18.2.0
-      react-dom: 18.2.0_react@18.2.0
-      react-router: 6.10.0_react@18.2.0
+      react: 0.0.0-experimental-dd5365878-20230407
+      react-dom: 0.0.0-experimental-dd5365878-20230407_jqoigns5qx5cxf46dto4uwatxu
+      react-router: 6.10.0_jqoigns5qx5cxf46dto4uwatxu
     dev: false
 
-  /react-router/6.10.0_react@18.2.0:
+  /react-router/6.10.0_jqoigns5qx5cxf46dto4uwatxu:
     resolution: {integrity: sha512-Nrg0BWpQqrC3ZFFkyewrflCud9dio9ME3ojHCF/WLsprJVzkq3q3UeEhMCAW1dobjeGbWgjNn/PVF6m46ANxXQ==}
     engines: {node: '>=14'}
     peerDependencies:
       react: '>=16.8'
     dependencies:
       '@remix-run/router': 1.5.0
-      react: 18.2.0
+      react: 0.0.0-experimental-dd5365878-20230407
     dev: false
 
   /react-shallow-renderer/16.15.0_react@18.2.0:
@@ -5929,6 +5939,13 @@ packages:
       react-shallow-renderer: 16.15.0_react@18.2.0
       scheduler: 0.23.0
     dev: true
+
+  /react/0.0.0-experimental-dd5365878-20230407:
+    resolution: {integrity: sha512-20mhhbxHjxmHyGboy+LJ5nze4UYVfCo3jhb18RT/UhhctL9bZ3T+AgSTm5OwVWGn91z2Zy09n9rxJog26FmA3Q==}
+    engines: {node: '>=0.10.0'}
+    dependencies:
+      loose-envify: 1.4.0
+    dev: false
 
   /react/18.2.0:
     resolution: {integrity: sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==}
@@ -6150,6 +6167,12 @@ packages:
     dependencies:
       xmlchars: 2.2.0
     dev: true
+
+  /scheduler/0.0.0-experimental-dd5365878-20230407:
+    resolution: {integrity: sha512-2Rto+XBHYAqb7gMQLD1+W0GX7JmVUdqZpCalDcxHGh7sRAyithDI04U0Ndrb1/B0N0frZM5qcPvhsq4lyPBTRQ==}
+    dependencies:
+      loose-envify: 1.4.0
+    dev: false
 
   /scheduler/0.23.0:
     resolution: {integrity: sha512-CtuThmgHNg7zIZWAXi3AsyIzA3n4xx7aNyjwC2VJldO2LMVDhFK+63xGqq6CsJH4rTAt6/M+N4GhZiDYPx9eUw==}
