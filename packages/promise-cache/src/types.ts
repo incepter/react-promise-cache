@@ -61,7 +61,7 @@ export type State<T, R, A extends unknown[]> =
 export type Api<T, R, A extends unknown[]> = {
   (...args: A): T | Promise<T>,
 
-  evict(...args: A): void,
-  inject(fn: (...args: A) => (T | Promise<T>)): void,
+  evict(...args: A): Api<T, R, A>,
+  inject(fn: (...args: A) => (T | Promise<T>)): Api<T, R, A>,
   subscribe(cb: (t: T | Promise<T> | any) => void): (() => void),
 }

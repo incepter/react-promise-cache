@@ -6,7 +6,6 @@ import {useApp} from "../../../main";
 import {Link} from "../../Link";
 
 async function getUserDetails(id: number) {
-  // @ts-ignore
   let promise = await API.get(`/users/${id}`);
   return promise.data
 }
@@ -24,13 +23,14 @@ export function Component() {
   React.useEffect(() => app.users.findById.subscribe(rerender), [])
   return (
     <Controls>
-      <div>
-        <details>
-          <summary>User {user.username} details</summary>
-          <pre>{JSON.stringify(user, null, 4)}</pre>
-        </details>
-        <Link href={`/users/${userId}/posts`}>see posts</Link>
-        <hr/>
+      <div style={{display: "flex", flexDirection: "column"}}>
+        <div>
+          <details open>
+            <summary>User {user.username} details</summary>
+            <pre>{JSON.stringify(user, null, 4)}</pre>
+          </details>
+          <Link href={`/users/${userId}/posts`}>see posts</Link>
+        </div>
         <React.Suspense fallback={`Loading ${user.name}'s posts`}>
           <Outlet/>
         </React.Suspense>

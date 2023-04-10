@@ -11,8 +11,11 @@ export function Component() {
       <summary>Users List</summary>
       <div style={{display: "flex", flexDirection: "column"}}>
         <div style={{display: "flex", flexDirection: "column"}}>
-          {users.map(user => <Link key={user.id}
-                                   href={`/users/${user.id}`}>{user.username}</Link>)}
+          {users.map(u => (
+            <Link key={u.id} href={`/users/${u.id}`}>
+              {u.id} - {u.username}
+            </Link>
+          ))}
         </div>
         <hr/>
         <React.Suspense fallback={`Loading user details`}>

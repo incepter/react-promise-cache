@@ -41,13 +41,13 @@ export function useApp<T extends DefaultShape>(): Application<T> {
 }
 
 export function AppProvider<T extends DefaultShape>(
-  {children, shape}: { children: React.ReactNode, shape: T }
+  {children, shape}: { children: React.ReactNode, shape?: T }
 ) {
   let self = React.useMemo(() => {
     let cache = new Map()
     return {
       cache,
-      app: createAppForShape(shape, cache),
+      app: createAppForShape(cache, shape),
     }
   }, [shape])
 
@@ -83,15 +83,17 @@ export function useApi<T, R, A extends unknown[]>(
 }
 
 function createAppForShape(
-  shape: Record<string, Record<string, any>>,
   cache: Map<any, {
     name: string,
     calls: Map<string, any>,
     listeners?: Record<number, () => void>
   }>,
+  shape?: Record<string, Record<string, any>>,
 ) {
   const app = {}
-
+  if (!shape) {
+    return app;
+  }
   for (let [resourceName, resource] of Object.entries(shape)) {
     let currentResource = {}
     for (let [apiName, apiDefinition] of Object.entries(resource)) {
@@ -169,18 +171,19 @@ export function createApi<T, R, A extends unknown[]>(
     let cacheCalls = fnCache.calls
     let memoizedArgs = memoize(args)
     if (cacheCalls.has(memoizedArgs)) {
-      let result = cacheCalls.delete(memoizedArgs)!;
+      cacheCalls.delete(memoizedArgs);
       if (fnCache.listeners) {
         React.startTransition(() => {
           Object.values(fnCache.listeners!).forEach((cb) => cb({}))
         })
       }
-      return result
     }
+    return apiToken;
   };
 
   apiToken.inject = function inject(fn) {
     realFunction = fn;
+    return apiToken;
   };
 
   apiToken.subscribe = function subscribe(cb) {
@@ -256,7 +259,7 @@ export function SuspenseBoundary({fallback, children}: {
 
 export function Hydration() {
   if (!isServer) {
-    // todo: spread hydration on effect
+    // todo: spread hydration states, because streaming may alter the prev
     return null;
   }
   let cache = useCache();
@@ -306,6 +309,7 @@ function attemptHydratedCacheForApi(name: string): Map<string, State<any, any, a
     return cache;
   }
 }
+
 declare global {
   interface Window {
     __HYDRATED_APP_CACHE__?: Record<string, Record<string, State<any, any, any>>>;
