@@ -14,7 +14,6 @@ type AppContextType<T extends DefaultShape> = {
   app: Application<T>,
 }
 const AppContext = React.createContext<AppContextType<any> | null>(null)
-export let jeton: SomethingIrrelevant = {} as const
 
 function useAppContext<T extends DefaultShape>(): Application<T> {
   let result = React.useContext(AppContext)
@@ -106,7 +105,7 @@ function createToken<T, R, A extends unknown[]>(
   }
 
 
-  function token(): Promise<T> | State<T, R, A> {
+  function token(...args: A): Promise<T> | State<T, R, A> {
     if (!realFunction) {
       throw new Error(`inject your function first`) // todo: add full path
     }
@@ -114,7 +113,7 @@ function createToken<T, R, A extends unknown[]>(
       cache.set(realFunction, {calls: new Map()})
     }
 
-    let memoizedArgs = memoize(arguments)
+    let memoizedArgs = memoize(args)
     let functionCache = cache.get(realFunction)!.calls
 
     // existing
@@ -123,8 +122,8 @@ function createToken<T, R, A extends unknown[]>(
       // either with a promise or sync value
       return cacheData.promise ? cacheData.promise : cacheData;
     }
-    let argsCopy = Array.from(arguments);
-    let dataToCache = realFunction.apply(null, arguments)
+    let argsCopy = Array.from(args);
+    let dataToCache = realFunction.apply(null, args)
 
     if (dataToCache && typeof dataToCache.then === "function") {
       trackPromiseResult(memoizedArgs, argsCopy, dataToCache, functionCache)
@@ -140,10 +139,10 @@ function createToken<T, R, A extends unknown[]>(
     return cacheData.promise ? cacheData.promise : cacheData;
   }
 
-  token.evict = function evict() {
+  token.evict = function evict(...args: A) {
     let fnCache = cache.get(realFunction)! // todo: throw
     let cacheCalls = fnCache.calls
-    let memoizedArgs = memoize(arguments)
+    let memoizedArgs = memoize(args)
     if (cacheCalls.has(memoizedArgs)) {
       let result = cacheCalls.delete(memoizedArgs)!;
       if (fnCache.listeners) {
@@ -204,7 +203,7 @@ function memoize(args) {
   return JSON.stringify(args) // todo: do it right!
 }
 
-let defaultJT = {fn: jeton}
+let defaultJT = {fn: {}}
 
 function buildDefaultJT<T, R, A extends unknown[]>(): {
   fn: ExtendedFn<T, R, A>

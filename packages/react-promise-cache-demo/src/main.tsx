@@ -6,7 +6,7 @@ import {api, createApp} from "react-promise-cache/src";
 
 let shape = {
   users: {
-    search: api<{}, Error, [number]>(),
+    search: api<{id: string}, Error, [number]>(),
     reducer: api<{}, Error, [string, number]>()
   }
 }
@@ -65,6 +65,7 @@ function NewWorld() {
 
   return (
     <>
+      <h4>Seeing user {userId} data</h4>
       {userIds.map(t => (
         <button key={t}
                 onClick={() => React.startTransition(() => setUserId(t))}>
