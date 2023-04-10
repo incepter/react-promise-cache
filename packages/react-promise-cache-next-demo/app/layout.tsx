@@ -1,6 +1,6 @@
 "use client";
 import './globals.css';
-import {AppProvider} from "react-application";
+import {AppProvider} from "react-promise-cache";
 
 export const metadata = {
   title: 'Create Next App',

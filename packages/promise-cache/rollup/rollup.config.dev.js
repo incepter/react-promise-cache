@@ -17,7 +17,7 @@ const devBuild = {
       sourcemap: true,
       preserveModules: true,
       // file: `dist/index.js`,
-      name: "ReactCachePromise",
+      name: "ReactPromiseCache",
       globals: {
         react: 'React',
       }
@@ -55,7 +55,7 @@ const declarationsBuild = {
       dir: "dist/es",
       sourcemap: false,
       preserveModules: true,
-      name: "ReactCachePromise",
+      name: "ReactPromiseCache",
       globals: {
         react: 'React',
       }

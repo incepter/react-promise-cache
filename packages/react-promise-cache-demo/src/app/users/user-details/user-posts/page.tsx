@@ -1,11 +1,22 @@
+import * as React from "react";
 import {useParams} from "react-router-dom";
 import {API} from "../../../api";
-import {usePromise} from "react-promise-cache";
+import {useApp} from "../../../../main";
+
+async function getUserPosts(userId: number) {
+  let result = await API.get(`/users/${userId}/posts`)
+  return result.data
+}
 
 export function Component() {
+  let app = useApp()
   let {userId} = useParams()
-  let currentUser = usePromise(API.get(`/users/${userId}`)).data
-  let userPosts = usePromise(API.get(`/users/${userId}/posts`)).data
+  // @ts-expect-error React.use isn't typed
+  let currentUser = React.use(app.users.findById(+userId!))
+
+  app.users.findUserPosts.inject(getUserPosts);
+  // @ts-expect-error React.use isn't typed
+  let userPosts = React.use(app.users.findUserPosts(+userId!))
 
   return (
     <details open>

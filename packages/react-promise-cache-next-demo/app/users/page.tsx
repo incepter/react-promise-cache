@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import axios from "axios";
-import {useApi} from "react-application";
+import {useApi} from "react-promise-cache";
 
 async function getUsers(): Promise<{id: string, username: string}[]> {
   let promise = await axios.get(`https://jsonplaceholder.typicode.com/users`);
