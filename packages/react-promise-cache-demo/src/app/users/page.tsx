@@ -1,18 +1,18 @@
 import * as React from "react";
-import {API} from "../api";
-import {Link, Outlet, useLocation} from "react-router-dom";
-import {usePromise} from "react-promise-cache";
+import {Outlet} from "react-router-dom";
+import {useApp} from "../../main";
+import {Link} from "../Link";
 
 export function Component() {
-  let search = useLocation().search
-  let users = usePromise(API.get(`/users${search || ''}`)).data
+  // @ts-expect-error React.use isn't typed
+  let users = React.use(useApp().users.list());
   return (
     <details open>
       <summary>Users List</summary>
       <div style={{display: "flex", flexDirection: "column"}}>
         <div style={{display: "flex", flexDirection: "column"}}>
           {users.map(user => <Link key={user.id}
-                                   to={`${user.id}`}>{user.username}</Link>)}
+                                   href={`/users/${user.id}`}>{user.username}</Link>)}
         </div>
         <hr/>
         <React.Suspense fallback={`Loading user details`}>

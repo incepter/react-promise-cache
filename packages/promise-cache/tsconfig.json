@@ -1,11 +1,12 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "target": "ESNext",
     "baseUrl": ".",
     "types": ["node", "jest"],
     "paths": {
       "tslib": ["node_modules/tslib"]
-    },
+    }
   },
   "include": ["src"],
   "exclude": [

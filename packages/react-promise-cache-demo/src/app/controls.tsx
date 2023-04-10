@@ -1,32 +1,29 @@
 import {useParams} from "react-router-dom";
 import * as React from "react";
-import {API} from "./api";
+import {useApp} from "../main";
 
 export default function Controls({children}) {
+  let app = useApp()
   let params = useParams()
-  let [index, rerender] = React.useState(0)
-  console.log("Controls component render with Index value", index)
 
   return (
     <div>
-      <h3>You created {index + 1} different react trees</h3>
-      <button onClick={() => rerender(prev => prev + 1)}>Rerender</button>
       {
         params?.userId && (
           <button onClick={() => {
-            API.put(`/users/${params.userId}`, {username: "John Doe"})
+            app.users.findById.evict(+params.userId!);
           }}>
-            Edit user {params.userId}
+            Invalidate user with id {params.userId}'s Cache
           </button>
         )
       }
       <button onClick={() => {
-        API.post(`/users`, {username: "John Doe"})
+        app.users.list.evict();
       }}>
-        Add a new user
+        Invalidate users list cache
       </button>
       <hr/>
-      <div key={index}>{children}</div>
+      <div>{children}</div>
     </div>
   )
 }
