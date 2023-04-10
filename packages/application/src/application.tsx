@@ -1,13 +1,22 @@
 import * as React from "react";
 import {
+  ApiEntry,
   AppEntry,
   Application,
-  DefaultShape, ErrorState, PendingState, Token,
-  SomethingIrrelevant, State, SuccessState, Api, ExtendedFn
+  DefaultShape,
+  ErrorState,
+  ExtendedFn,
+  PendingState,
+  State,
+  SuccessState,
+  Api
 } from "./types";
+import {Suspense} from "react";
+import {isServer, maybeWindow, stringify} from "./utils";
 
 type AppContextType<T extends DefaultShape> = {
-  cache: WeakMap<any, {
+  cache: Map<any, {
+    name: string,
     calls: Map<string, State<any, any, any>>,
     listeners?: Record<number, (state: any) => void>
   }>,
@@ -15,56 +24,59 @@ type AppContextType<T extends DefaultShape> = {
 }
 const AppContext = React.createContext<AppContextType<any> | null>(null)
 
-function useAppContext<T extends DefaultShape>(): Application<T> {
+function useAppContext<T extends DefaultShape>(): AppContextType<T> {
   let result = React.useContext(AppContext)
   if (!result) {
-    throw new Error("Add <LibraryProvider />");
+    throw new Error("Add <AppProvider /> up in your tree");
   }
-  return result.app
+  return result
 }
 
-function useCache<T extends DefaultShape>() {
-  let result = React.useContext(AppContext)
-  if (!result) {
-    throw new Error("Add <LibraryProvider />");
-  }
-  return result.cache
+export function useCache<T extends DefaultShape>() {
+  return useAppContext().cache
 }
 
 export function useApp<T extends DefaultShape>(): Application<T> {
-  return useAppContext<T>()
+  return useAppContext<T>().app
+}
+
+export function AppProvider<T extends DefaultShape>(
+  {children, shape}: { children: React.ReactNode, shape: T }
+) {
+  let self = React.useMemo(() => {
+    let cache = new Map()
+    return {
+      cache,
+      app: createAppForShape(shape, cache),
+    }
+  }, [shape])
+
+  return (
+    <AppContext.Provider value={self}>
+      {children}
+    </AppContext.Provider>
+  )
 }
 
 export function createApp<Shape extends DefaultShape>(shape: AppEntry<Shape>) {
   return {
     Provider({children}: { children: React.ReactNode }) {
-      let self = React.useMemo(() => {
-        let cache = new WeakMap()
-        return {
-          cache,
-          app: createAppForShape(shape, cache),
-        }
-      }, [shape])
-
-      return (
-        <AppContext.Provider value={self}>
-          {children}
-        </AppContext.Provider>
-      )
+      return <AppProvider shape={shape}>{children}</AppProvider>
     },
     useApp(): Application<Shape> {
-      return useAppContext()
+      return useAppContext<Shape>().app
     }
   }
 }
 
 export function useApi<T, R, A extends unknown[]>(
   create: (...args: A) => (T | Promise<T>),
-  deps = []
+  deps = [],
+  name = create.name
 ) {
   let cache = useCache();
   return React.useMemo(() => {
-    let token = createToken<T, R, A>(undefined, cache)
+    let token = createApi<T, R, A>(undefined, cache, name)
     token.inject(create)
     return token;
   }, deps)
@@ -72,7 +84,8 @@ export function useApi<T, R, A extends unknown[]>(
 
 function createAppForShape(
   shape: Record<string, Record<string, any>>,
-  cache: WeakMap<any, {
+  cache: Map<any, {
+    name: string,
     calls: Map<string, any>,
     listeners?: Record<number, () => void>
   }>,
@@ -82,7 +95,8 @@ function createAppForShape(
   for (let [resourceName, resource] of Object.entries(shape)) {
     let currentResource = {}
     for (let [apiName, apiDefinition] of Object.entries(resource)) {
-      currentResource[apiName] = createToken(apiDefinition, cache)
+      let name = `${resourceName}_${apiName}`
+      currentResource[apiName] = createApi(apiDefinition, cache, name)
     }
     app[resourceName] = currentResource;
   }
@@ -90,13 +104,15 @@ function createAppForShape(
   return app;
 }
 
-function createToken<T, R, A extends unknown[]>(
-  apiDefinition: Api<T, R, A> | undefined,
-  cache: WeakMap<any, {
+export function createApi<T, R, A extends unknown[]>(
+  apiDefinition: ApiEntry<T, R, A> | undefined,
+  cache: Map<any, {
+    name: string,
     calls: Map<string, State<T, R, A>>,
     listeners?: Record<number, (state: any) => void>
   }>,
-): Token<T, R, A> {
+  name: string,
+): Api<T, R, A> {
   let index = 0
   let realFunction
 
@@ -104,13 +120,22 @@ function createToken<T, R, A extends unknown[]>(
     realFunction = apiDefinition.producer
   }
 
-
-  function token(...args: A): Promise<T> | State<T, R, A> {
+  function apiToken(...args: A): Promise<T> | State<T, R, A> {
     if (!realFunction) {
-      throw new Error(`inject your function first`) // todo: add full path
+      throw new Error(`inject your ${name} function first`)
     }
     if (!cache.has(realFunction)) {
-      cache.set(realFunction, {calls: new Map()})
+      let cacheToUse;
+      if (!isServer) {
+        let hydratedCache = attemptHydratedCacheForApi(name)
+        if (hydratedCache) {
+          cacheToUse = hydratedCache;
+        }
+      }
+      if (!cacheToUse) {
+        cacheToUse = new Map()
+      }
+      cache.set(realFunction, {name, calls: cacheToUse})
     }
 
     let memoizedArgs = memoize(args)
@@ -139,7 +164,7 @@ function createToken<T, R, A extends unknown[]>(
     return cacheData.promise ? cacheData.promise : cacheData;
   }
 
-  token.evict = function evict(...args: A) {
+  apiToken.evict = function evict(...args: A) {
     let fnCache = cache.get(realFunction)! // todo: throw
     let cacheCalls = fnCache.calls
     let memoizedArgs = memoize(args)
@@ -154,11 +179,11 @@ function createToken<T, R, A extends unknown[]>(
     }
   };
 
-  token.inject = function inject(fn) {
+  apiToken.inject = function inject(fn) {
     realFunction = fn;
   };
 
-  token.subscribe = function subscribe(cb) {
+  apiToken.subscribe = function subscribe(cb) {
     let id = ++index
     let fnCache = cache.get(realFunction)!
     if (!fnCache.listeners) {
@@ -168,7 +193,7 @@ function createToken<T, R, A extends unknown[]>(
     return () => delete fnCache.listeners![id]
   };
 
-  return token as Token<T, R, A>;
+  return apiToken as Api<T, R, A>;
 }
 
 function trackPromiseResult<T, R, A extends unknown[]>(
@@ -212,7 +237,77 @@ function buildDefaultJT<T, R, A extends unknown[]>(): {
 }
 
 export function api<T, R, A extends unknown[]>(
-  props?: Omit<Api<T, R, A>, "fn">
-): Api<T, R, A> {
+  props?: Omit<ApiEntry<T, R, A>, "fn">
+): ApiEntry<T, R, A> {
   return Object.assign({}, props, buildDefaultJT<T, R, A>())
+}
+
+export function SuspenseBoundary({fallback, children}: {
+  fallback,
+  children,
+}) {
+  return (
+    <Suspense fallback={fallback}>
+      {children}
+      <Hydration/>
+    </Suspense>
+  )
+}
+
+export function Hydration() {
+  if (!isServer) {
+    // todo: spread hydration on effect
+    return null;
+  }
+  let cache = useCache();
+
+  let entries: Record<string, Record<string, State<any, any, any>>> = {}
+  for (let {name, calls} of cache.values()) {
+    entries[name] = transformForHydratedCallsCache(calls)
+  }
+
+  let assignment = `Object.assign(window.__HYDRATED_APP_CACHE__ || {}, ${stringify(entries, 5)})`
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `window.__HYDRATED_APP_CACHE__ = ${assignment}`
+      }}></script>
+  )
+}
+
+function transformForHydratedCallsCache(
+  calls: Map<string, State<any, any, any>>
+) {
+  return [...calls.entries()].reduce((acc, curr) => {
+    if (curr[1].hydrated) {
+      return acc;
+    }
+    let {promise, ...rest} = curr[1]
+    curr[1].hydrated = true
+    acc[curr[0]] = rest;
+    return acc;
+  }, {})
+}
+
+function attemptHydratedCacheForApi(name: string): Map<string, State<any, any, any>> | undefined {
+  let hydratedCache = maybeWindow!.__HYDRATED_APP_CACHE__;
+  if (hydratedCache && hydratedCache[name]) {
+    let cache = new Map();
+    for (let value of Object.values(cache)) {
+      if (value.status === "fulfilled") {
+        value.promise = Promise.resolve(value.data)
+      }
+      if (value.status === "rejected") {
+        value.promise = Promise.reject(value.data)
+      }
+      cache.set(name, value)
+    }
+    delete hydratedCache[name];
+    return cache;
+  }
+}
+declare global {
+  interface Window {
+    __HYDRATED_APP_CACHE__?: Record<string, Record<string, State<any, any, any>>>;
+  }
 }

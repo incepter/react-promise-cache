@@ -2,7 +2,7 @@ import * as React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
 import axios from "axios";
-import {api, createApp} from "react-promise-cache/src";
+import {api, createApp, useApi} from "react-application";
 
 let shape = {
   users: {
@@ -23,7 +23,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   </React.StrictMode>,
 )
 
-async function getUserDetails(id) {
+async function getUserDetails(id: number) {
   // @ts-ignore
   let promise = await axios.get(`https://jsonplaceholder.typicode.com/users/${id}`);
   return promise.data
@@ -63,6 +63,11 @@ function NewWorld() {
     return app.users.search.subscribe(rerender)
   }, [app.users.search])
 
+  let userDetails = useApi(getUserDetails)
+  // @ts-ignore
+  let user3 = React.use(userDetails(3)) // can be called conditionally
+  console.log('user 3 is', user3)
+
   return (
     <>
       <h4>Seeing user {userId} data</h4>
@@ -79,6 +84,7 @@ function NewWorld() {
       ))}
       <hr/>
       <h2>Counter: {oho.data}</h2>
+      {/* @ts-ignore */}
       <button onClick={() => dispatch((prev => prev.data + 1))}>dispatch in reducer
       </button>
       <hr/>

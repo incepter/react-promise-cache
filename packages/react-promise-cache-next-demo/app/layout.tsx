@@ -1,4 +1,6 @@
-import './globals.css'
+"use client";
+import './globals.css';
+import {AppProvider} from "react-application";
 
 export const metadata = {
   title: 'Create Next App',
@@ -12,7 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AppProvider shape={{}}>
+          {children}
+        </AppProvider>
+      </body>
     </html>
   )
 }
