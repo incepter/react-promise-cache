@@ -190,7 +190,7 @@ export function createApi<T, R, A extends unknown[]>(
     let dataToCache = realFunction.apply(null, args)
 
     if (dataToCache && typeof dataToCache.then === "function") {
-      trackPromiseResult(memoizedArgs, argsCopy, dataToCache, functionCache)
+      trackPromiseResult(memoizedArgs, argsCopy, dataToCache, cache.get(realFunction)!)
     } else {
       // sync, no promise involved, mostly useReducer or useState
       functionCache.set(memoizedArgs, {
@@ -198,6 +198,7 @@ export function createApi<T, R, A extends unknown[]>(
         data: dataToCache,
         status: "fulfilled",
       } as SuccessState<T, A>)
+      notifyListeners(cache.get(realFunction)!.listeners);
     }
     let cacheData = functionCache.get(memoizedArgs)!
     return cacheData.promise ? cacheData.promise : cacheData;
@@ -223,10 +224,13 @@ export function createApi<T, R, A extends unknown[]>(
   };
 
   apiToken.useState = function useState(...args: A) {
-    apiToken.apply(null, args); // forces everything!
+    apiToken.apply(null, args);
 
     let memoizedArgs = memoize(args);
     let functionCache = cache.get(realFunction)!.calls;
+
+    let rerender = React.useState()[1];
+    React.useEffect(() => apiToken.subscribe(rerender), []);
 
     return functionCache.get(memoizedArgs)!
   };
@@ -243,37 +247,60 @@ export function createApi<T, R, A extends unknown[]>(
       fnCache.listeners = {}
     }
     fnCache.listeners[id] = cb
-    return () => delete fnCache.listeners![id]
+    return () => {
+      delete fnCache.listeners![id]
+    }
   };
 
   return apiToken as Api<T, R, A>;
 }
 
+function notifyListeners(listeners?: Record<number, ({}) => void>) {
+  if (listeners) {
+    React.startTransition(() => {
+      Object.values(listeners!).forEach((cb) => cb({}))
+    })
+  }
+}
+
 function trackPromiseResult<T, R, A extends unknown[]>(
-  memoizedArgs, argsCopy, dataToCache, fnCache) {
-  fnCache.set(memoizedArgs, {
+  memoizedArgs: string,
+  argsCopy: A,
+  dataToCache: Promise<T>,
+  fnCache: {
+    name: string,
+    calls: Map<string, State<T, R, A>>,
+    listeners?: Record<number, (state: any) => void>
+  },
+) {
+  let callsCache = fnCache.calls;
+  callsCache.set(memoizedArgs, {
     args: argsCopy,
     data: dataToCache,
     status: "pending",
     promise: dataToCache,
-  } as PendingState<T, A>)
+  } as PendingState<T, A>);
+  notifyListeners(fnCache.listeners);
+
   dataToCache.then(
     result => {
-      fnCache.set(memoizedArgs, {
+      callsCache.set(memoizedArgs, {
         data: result,
         args: argsCopy,
         status: "fulfilled",
         promise: dataToCache,
-      } as SuccessState<T, A>)
+      } as SuccessState<T, A>);
+      notifyListeners(fnCache.listeners);
       return result;
     },
     reason => {
-      fnCache.set(memoizedArgs, {
+      callsCache.set(memoizedArgs, {
         data: reason,
         args: argsCopy,
         status: "rejected",
         promise: dataToCache,
       } as ErrorState<T, R, A>);
+      notifyListeners(fnCache.listeners);
       return reason;
     },
   );

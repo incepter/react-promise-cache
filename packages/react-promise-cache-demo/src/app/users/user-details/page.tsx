@@ -18,10 +18,19 @@ export function Component() {
 
   // @ts-expect-error React.use isn't typed
   let user = React.use(app.users.findById(+userId));
-  // let user = app.users.findById.use(+userId);
+  // let result = app.users.findById.useState(+userId);
 
   let rerender = React.useState()[1];
   React.useEffect(() => app.users.findById.subscribe(rerender), [])
+  // if (result.status === "rejected") {
+  //   return null;
+  // }
+  // if (result.status === "pending") {
+  //   return null;
+  // }
+  //
+  // let user = result.data;
+
   return (
     <Controls>
       <div style={{display: "flex", flexDirection: "column"}}>
