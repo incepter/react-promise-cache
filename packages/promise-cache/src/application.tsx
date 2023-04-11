@@ -9,7 +9,7 @@ import {
   PendingState,
   State,
   SuccessState,
-  Api
+  Api,
 } from "./types";
 import {Suspense} from "react";
 import {isServer, maybeWindow, stringify} from "./utils";
@@ -40,16 +40,38 @@ export function useApp<T extends DefaultShape>(): Application<T> {
   return useAppContext<T>().app
 }
 
+type ProviderProps<T extends DefaultShape> = {
+  shape?: T,
+  app?: Application<T>,
+  children: React.ReactNode,
+  cache?: Map<string, {
+    name: string,
+    calls: Map<string, any>,
+    listeners?: Record<number, () => void>
+  }>,
+}
+
 export function AppProvider<T extends DefaultShape>(
-  {children, shape}: { children: React.ReactNode, shape?: T }
+  {children, shape, cache, app}: ProviderProps<T>
 ) {
   let self = React.useMemo(() => {
-    let cache = new Map()
-    return {
-      cache,
-      app: createAppForShape(cache, shape),
+    if (app) {
+      if (!cache) {
+        throw new Error('Cannot pass app without its cache');
+      }
+      return {
+        app,
+        cache,
+      }
     }
-  }, [shape])
+    let cacheToUse = cache || new Map();
+    let appToUse = createAppForShape(cacheToUse, shape) as Application<T>
+
+    return {
+      app: appToUse,
+      cache: cacheToUse,
+    }
+  }, [shape, cache])
 
   return (
     <AppContext.Provider value={self}>
@@ -58,10 +80,24 @@ export function AppProvider<T extends DefaultShape>(
   )
 }
 
-export function createApp<Shape extends DefaultShape>(shape: AppEntry<Shape>) {
+export function createApp<Shape extends DefaultShape>(
+  shape: AppEntry<Shape>,
+  cache?: Map<string, {
+    name: string,
+    calls: Map<string, any>,
+    listeners?: Record<number, () => void>
+  }>,
+) {
+  let cacheToUse = cache || new Map();
+  let app = createAppForShape(cacheToUse, shape) as Application<Shape>
   return {
-    Provider({children}: { children: React.ReactNode }) {
-      return <AppProvider shape={shape}>{children}</AppProvider>
+    app,
+    Provider({children}: ProviderProps<Shape>) {
+      return (
+        <AppProvider cache={cacheToUse} app={app} shape={shape}>
+          {children}
+        </AppProvider>
+      )
     },
     useApp(): Application<Shape> {
       return useAppContext<Shape>().app
@@ -215,6 +251,7 @@ function trackPromiseResult<T, R, A extends unknown[]>(
         status: "fulfilled",
         promise: dataToCache,
       } as SuccessState<T, A>)
+      return result;
     },
     reason => {
       fnCache.set(memoizedArgs, {
@@ -222,7 +259,8 @@ function trackPromiseResult<T, R, A extends unknown[]>(
         args: argsCopy,
         status: "rejected",
         promise: dataToCache,
-      } as ErrorState<T, R, A>)
+      } as ErrorState<T, R, A>);
+      return reason;
     },
   );
 }

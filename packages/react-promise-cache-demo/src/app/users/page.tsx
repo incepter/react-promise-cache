@@ -1,11 +1,11 @@
 import * as React from "react";
 import {Outlet} from "react-router-dom";
-import {useApp} from "../../main";
+import {app, useApp} from "../../main";
 import {Link} from "../Link";
 
 export function Component() {
   // @ts-expect-error React.use isn't typed
-  let users = React.use(useApp().users.list());
+  let users = React.use(app.users.list());
   return (
     <details open>
       <summary>Users List</summary>

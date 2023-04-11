@@ -2,7 +2,7 @@ import {Outlet, useParams} from "react-router-dom";
 import {API} from "../../api";
 import * as React from "react";
 import Controls from "../../controls";
-import {useApp} from "../../../main";
+import {app} from "../../../main";
 import {Link} from "../../Link";
 
 async function getUserDetails(id: number) {
@@ -11,7 +11,6 @@ async function getUserDetails(id: number) {
 }
 
 export function Component() {
-  let app = useApp();
   let {userId} = useParams();
 
   app.users.findById.inject(getUserDetails);

@@ -20,7 +20,7 @@ let shape = {
   }
 }
 
-export let {Provider, useApp} = createApp<typeof shape>(shape)
+export let {Provider, useApp, app} = createApp<typeof shape>(shape)
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

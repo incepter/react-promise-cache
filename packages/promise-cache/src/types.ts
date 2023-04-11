@@ -5,10 +5,37 @@ export type ExtendedFn<T, R, A extends unknown[]> =
   DefaultFn<T, R, A>
   | SomethingIrrelevant
 export type DefaultShape = Record<string, Record<string, any>>
+
 export interface ApiEntry<T extends unknown, R extends unknown, A extends unknown[]> {
   fn: ExtendedFn<T, R, A>,
-  eager?: boolean,
   producer?: Producer<T, A>,
+  // cache?: CacheConfig<T, R, A, string>,
+}
+
+type CacheConfig<T, R, A extends unknown[], Hash = string> = {
+  // enabled: false would disabled entirely caching
+  // in dev mode, we may add a tight limit in dev mode to detect unwanted behavior
+  enabled?: boolean,
+  // The actual function call hash, will be calculated from the call args
+  hash?(...args: A): Hash,
+  // whether the current resolved state should be saved or not
+  // not saving it means removing the entry from the cache (because it was pending)
+  // and then it will create another one again! this may lead to infinite loops
+  // we may add a count of the sequential failures or decisions not to cache, so
+  // retry can be implemented just using that.
+  cache?(s: ResolvedState<T, R, A>): boolean,
+  // the deadline after which a state that will be cached will become stale
+  // and thus would be automatically evicted
+  deadline?: number | ((s: SuccessState<T, A>) => number),
+  // loads either synchronously or asynchronously the cache
+  // can be used with either localStorage or AsyncStorage
+  load?():
+    Map<Hash, ResolvedState<T, R, A>> |
+    Promise<Map<Hash, ResolvedState<T, R, A>>>,
+  // should give you the cache after each change to it so you will persist it again
+  // it won't be reloaded right away, since it should stay the same
+  // you can configure the deadline otherwise!
+  persist(cache: Map<Hash, ResolvedState<T, R, A>>): void,
 }
 
 export type AppEntry<T extends DefaultShape> = {
@@ -52,6 +79,10 @@ export type ErrorState<T, R, A extends unknown[]> = {
   promise: Promise<T>,
   hydrated?: true,
 }
+// T: data type, R: reason of rejection, A args!
+export type ResolvedState<T, R, A extends unknown[]> =
+  SuccessState<T, A>
+  | ErrorState<T, R, A>
 // T: data type, R: reason of rejection, A args!
 export type State<T, R, A extends unknown[]> =
   PendingState<T, A>
