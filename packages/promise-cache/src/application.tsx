@@ -1,28 +1,22 @@
 import * as React from "react";
+import {Suspense} from "react";
 import {
+  Api,
   ApiEntry,
+  AppContextType,
   AppEntry,
   Application,
   DefaultShape,
   ErrorState,
   ExtendedFn,
   PendingState,
+  ProviderProps,
   State,
   SuccessState,
-  Api,
 } from "./types";
-import {Suspense} from "react";
 import {isServer, maybeWindow, stringify} from "./utils";
 import {useImpl} from "./useImpl";
 
-type AppContextType<T extends DefaultShape> = {
-  cache: Map<any, {
-    name: string,
-    calls: Map<string, State<any, any, any>>,
-    listeners?: Record<number, (state: any) => void>
-  }>,
-  app: Application<T>,
-}
 const AppContext = React.createContext<AppContextType<any> | null>(null)
 
 function useAppContext<T extends DefaultShape>(): AppContextType<T> {
@@ -39,17 +33,6 @@ export function useCache<T extends DefaultShape>() {
 
 export function useApp<T extends DefaultShape>(): Application<T> {
   return useAppContext<T>().app
-}
-
-type ProviderProps<T extends DefaultShape> = {
-  shape?: T,
-  app?: Application<T>,
-  children: React.ReactNode,
-  cache?: Map<string, {
-    name: string,
-    calls: Map<string, any>,
-    listeners?: Record<number, () => void>
-  }>,
 }
 
 export function AppProvider<T extends DefaultShape>(
@@ -179,6 +162,7 @@ export function createApi<T, R, A extends unknown[]>(
 
     let memoizedArgs = memoize(args)
     let functionCache = cache.get(realFunction)!.calls
+
 
     // existing
     if (functionCache.has(memoizedArgs)) {
@@ -324,22 +308,37 @@ export function api<T, R, A extends unknown[]>(
   return Object.assign({}, props, buildDefaultJT<T, R, A>())
 }
 
-export function SuspenseBoundary({fallback, children}: {
-  fallback,
-  children,
+export function SuspenseBoundary({fallback, children, id}: {
+  id: string,
+  fallback?: React.ReactNode,
+  children?: React.ReactNode,
 }) {
   return (
     <Suspense fallback={fallback}>
       {children}
-      <Hydration/>
+      <Hydration id={id}/>
     </Suspense>
   )
 }
 
-export function Hydration() {
+export function Hydration({id}: { id: string }) {
+  if (!id) {
+    throw new Error("Please give a unique id to Hydration!")
+  }
   if (!isServer) {
-    // todo: spread hydration states, because streaming may alter the prev
-    return null;
+    // todo: spread hydration states, streaming may alter the previous values
+    let existingHtml = React.useRef<string | undefined>()
+    if (!existingHtml.current) {
+      existingHtml.current = document
+        .getElementById(id)?.innerHTML
+    }
+    return existingHtml.current ? (
+      <script
+        id={id}
+        dangerouslySetInnerHTML={{
+          __html: existingHtml.current
+        }}></script>
+    ) : null;
   }
   let cache = useCache();
 
@@ -351,6 +350,7 @@ export function Hydration() {
   let assignment = `Object.assign(window.__HYDRATED_APP_CACHE__ || {}, ${stringify(entries, 5)})`
   return (
     <script
+      id={id}
       dangerouslySetInnerHTML={{
         __html: `window.__HYDRATED_APP_CACHE__ = ${assignment}`
       }}></script>
@@ -375,22 +375,27 @@ function attemptHydratedCacheForApi(name: string): Map<string, State<any, any, a
   let hydratedCache = maybeWindow!.__HYDRATED_APP_CACHE__;
   if (hydratedCache && hydratedCache[name]) {
     let cache = new Map();
-    for (let value of Object.values(cache)) {
-      if (value.status === "fulfilled") {
-        value.promise = Promise.resolve(value.data)
+    for (let [argsHash, state] of Object.entries(hydratedCache[name])) {
+      if (state.status === "fulfilled") {
+        let promise = Promise.resolve(state.data);
+        // hack react use..
+        // @ts-ignore
+        promise.status = "fulfilled";
+        // @ts-ignore
+        promise.value = state.data;
+        state.promise = promise
       }
-      if (value.status === "rejected") {
-        value.promise = Promise.reject(value.data)
+      if (state.status === "rejected") {
+        // hack react use..
+        let promise = Promise.resolve(state.data);
+        // @ts-ignore
+        promise.status = "rejected";
+        // @ts-ignore
+        promise.reason = state.data;
+        state.promise = Promise.reject(state.data)
       }
-      cache.set(name, value)
+      cache.set(argsHash, state)
     }
-    delete hydratedCache[name];
     return cache;
-  }
-}
-
-declare global {
-  interface Window {
-    __HYDRATED_APP_CACHE__?: Record<string, Record<string, State<any, any, any>>>;
   }
 }

@@ -98,3 +98,29 @@ export type Api<T, R, A extends unknown[]> = {
   inject(fn: (...args: A) => (T | Promise<T>)): Api<T, R, A>,
   subscribe(cb: (t: T | Promise<T> | any) => void): (() => void),
 }
+
+declare global {
+  interface Window {
+    __HYDRATED_APP_CACHE__?: Record<string, Record<string, State<any, any, any>>>;
+  }
+}
+
+export type ProviderProps<T extends DefaultShape> = {
+  shape?: T,
+  app?: Application<T>,
+  children: React.ReactNode,
+  cache?: Map<string, {
+    name: string,
+    calls: Map<string, any>,
+    listeners?: Record<number, () => void>
+  }>,
+}
+
+export type AppContextType<T extends DefaultShape> = {
+  cache: Map<any, {
+    name: string,
+    calls: Map<string, State<any, any, any>>,
+    listeners?: Record<number, (state: any) => void>
+  }>,
+  app: Application<T>,
+}

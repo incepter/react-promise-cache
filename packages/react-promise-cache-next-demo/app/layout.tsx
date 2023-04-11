@@ -1,4 +1,5 @@
 "use client";
+import * as React from "react";
 import './globals.css';
 import {AppProvider} from "react-promise-cache";
 
@@ -14,11 +15,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <AppProvider shape={{}}>
-          {children}
-        </AppProvider>
-      </body>
+    <body>
+    <AppProvider>
+      <React.Suspense fallback="Loading your app">
+        {children}
+      </React.Suspense>
+    </AppProvider>
+    </body>
     </html>
   )
 }

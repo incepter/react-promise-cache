@@ -19,19 +19,20 @@ async function getUserDetails(id: number) {
   return promise.data
 }
 
-export default function Component({searchParams}) {
+export default function Component({params: {id}}) {
   // @ts-ignore
-  let users = React.use(useApi(getUsers)())
+  let user = React.use(useApi(getUserDetails)(id))
   return (
     <details open>
-      <summary>Users List</summary>
+      <summary>User {user.name} details </summary>
       <div style={{display: "flex", flexDirection: "column"}}>
         <div style={{display: "flex", flexDirection: "column"}}>
-          {users.map(user => <Link key={user.id}
-                                   href={`/users/${user.id}`}>{user.username}</Link>)}
+          <pre>
+            {JSON.stringify(user, null, 4)}
+          </pre>
         </div>
       </div>
-      <Hydration id="users_boundary" />
+      <Hydration id="user_details_boundary" />
     </details>
   );
 }
