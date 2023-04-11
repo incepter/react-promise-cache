@@ -6,6 +6,7 @@ import {Link} from "../Link";
 export function Component() {
   // @ts-expect-error React.use isn't typed
   let users = React.use(app.users.list());
+  // let users = app.users.list.use();
   return (
     <details open>
       <summary>Users List</summary>

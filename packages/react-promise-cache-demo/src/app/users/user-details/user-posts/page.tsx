@@ -13,10 +13,11 @@ export function Component() {
   let {userId} = useParams()
   // @ts-expect-error React.use isn't typed
   let currentUser = React.use(app.users.findById(+userId!))
+  // let currentUser = app.users.findById.use(+userId!)
 
-  app.users.findUserPosts.inject(getUserPosts);
+  // let userPosts = app.users.findUserPosts.inject(getUserPosts).use(+userId!)
   // @ts-expect-error React.use isn't typed
-  let userPosts = React.use(app.users.findUserPosts(+userId!))
+  let userPosts = React.use(app.users.findUserPosts())
 
   return (
     <details open>

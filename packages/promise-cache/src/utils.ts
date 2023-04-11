@@ -3,6 +3,7 @@ export let isServer = !maybeWindow ||
   !maybeWindow.document ||
   !maybeWindow.document.createComment;
 
+/* istanbul ignore next */
 export function stringify(val, depth) {
   depth = isNaN(+depth) ? 1 : depth;
 

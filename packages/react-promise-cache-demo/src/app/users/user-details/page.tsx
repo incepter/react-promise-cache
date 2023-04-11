@@ -14,9 +14,11 @@ export function Component() {
   let {userId} = useParams();
 
   app.users.findById.inject(getUserDetails);
+  // console.log('AN STATE IS !!', app.users.findById.useState(11))
 
   // @ts-expect-error React.use isn't typed
   let user = React.use(app.users.findById(+userId));
+  // let user = app.users.findById.use(+userId);
 
   let rerender = React.useState()[1];
   React.useEffect(() => app.users.findById.subscribe(rerender), [])

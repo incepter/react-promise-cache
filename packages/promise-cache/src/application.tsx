@@ -13,6 +13,7 @@ import {
 } from "./types";
 import {Suspense} from "react";
 import {isServer, maybeWindow, stringify} from "./utils";
+import {useImpl} from "./useImpl";
 
 type AppContextType<T extends DefaultShape> = {
   cache: Map<any, {
@@ -71,7 +72,7 @@ export function AppProvider<T extends DefaultShape>(
       app: appToUse,
       cache: cacheToUse,
     }
-  }, [shape, cache])
+  }, [app, shape, cache])
 
   return (
     <AppContext.Provider value={self}>
@@ -215,6 +216,19 @@ export function createApi<T, R, A extends unknown[]>(
       }
     }
     return apiToken;
+  };
+
+  apiToken.use = function use(...args: A) {
+    return useImpl(apiToken.apply(null, args))
+  };
+
+  apiToken.useState = function useState(...args: A) {
+    apiToken.apply(null, args); // forces everything!
+
+    let memoizedArgs = memoize(args);
+    let functionCache = cache.get(realFunction)!.calls;
+
+    return functionCache.get(memoizedArgs)!
   };
 
   apiToken.inject = function inject(fn) {

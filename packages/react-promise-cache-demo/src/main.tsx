@@ -11,6 +11,7 @@ let shape = {
   users: {
     list: api<UserType[], Error, []>({
       producer: async function getUsersList() {
+        // await new Promise(res => setTimeout(res, 20000))
         let promise = await API.get<UserType[]>(`/users`);
         return promise.data
       }
@@ -25,7 +26,7 @@ export let {Provider, useApp, app} = createApp<typeof shape>(shape)
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <Provider>
-      <React.Suspense fallback="Loading your data">
+      <React.Suspense fallback="___________________________________Loading your data">
         <RouterProvider router={router}/>
       </React.Suspense>
     </Provider>
