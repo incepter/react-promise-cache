@@ -17,7 +17,7 @@ export function Component() {
 
   // let userPosts = app.users.findUserPosts.inject(getUserPosts).use(+userId!)
   // @ts-expect-error React.use isn't typed
-  let userPosts = React.use(app.users.findUserPosts())
+  let userPosts = React.use(app.users.findUserPosts.inject(getUserPosts)(+userId!))
 
   return (
     <details open>

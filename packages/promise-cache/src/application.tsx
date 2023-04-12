@@ -347,7 +347,7 @@ export function Hydration({id}: { id: string }) {
     entries[name] = transformForHydratedCallsCache(calls)
   }
 
-  let assignment = `Object.assign(window.__HYDRATED_APP_CACHE__ || {}, ${stringify(entries, 5)})`
+  let assignment = `Object.assign(window.__HYDRATED_APP_CACHE__ || {}, ${stringify(entries, 30)})`
   return (
     <script
       id={id}
