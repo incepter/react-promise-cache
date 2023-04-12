@@ -258,7 +258,7 @@ importers:
         specifier: 0.0.0-experimental-dd5365878-20230407
         version: 0.0.0-experimental-dd5365878-20230407(react@0.0.0-experimental-dd5365878-20230407)
       react-promise-cache:
-        specifier: workspace:^0.0.4
+        specifier: workspace:^0.0.5
         version: link:../promise-cache
       react-router-dom:
         specifier: 6.10.0
@@ -310,7 +310,7 @@ importers:
         specifier: 0.0.0-experimental-dd5365878-20230407
         version: 0.0.0-experimental-dd5365878-20230407(react@0.0.0-experimental-dd5365878-20230407)
       react-promise-cache:
-        specifier: workspace:^0.0.4
+        specifier: workspace:^0.0.5
         version: link:../promise-cache
       typescript:
         specifier: 5.0.3
