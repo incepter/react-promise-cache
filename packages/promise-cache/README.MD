@@ -7,6 +7,8 @@ The idea behind this library is that you will be able to cache promises that
 you receive from different functions in your application, hydrate them and
 boot from their data.
 
+Note: I explained better the library in this [twitter thread](https://twitter.com/incepterr/status/1645540428563857414).
+
 ```tsx
 import {useApp} from "react-promise-cache"
 

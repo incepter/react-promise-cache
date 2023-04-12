@@ -2,7 +2,7 @@ import {Outlet, useParams} from "react-router-dom";
 import {API} from "../../api";
 import * as React from "react";
 import Controls from "../../controls";
-import {useApp} from "../../../main";
+import {app} from "../../../main";
 import {Link} from "../../Link";
 
 async function getUserDetails(id: number) {
@@ -11,16 +11,26 @@ async function getUserDetails(id: number) {
 }
 
 export function Component() {
-  let app = useApp();
   let {userId} = useParams();
 
   app.users.findById.inject(getUserDetails);
+  // console.log('AN STATE IS !!', app.users.findById.useState(11))
 
   // @ts-expect-error React.use isn't typed
   let user = React.use(app.users.findById(+userId));
+  // let result = app.users.findById.useState(+userId);
 
   let rerender = React.useState()[1];
   React.useEffect(() => app.users.findById.subscribe(rerender), [])
+  // if (result.status === "rejected") {
+  //   return null;
+  // }
+  // if (result.status === "pending") {
+  //   return null;
+  // }
+  //
+  // let user = result.data;
+
   return (
     <Controls>
       <div style={{display: "flex", flexDirection: "column"}}>

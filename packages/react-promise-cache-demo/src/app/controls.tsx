@@ -1,9 +1,8 @@
 import {useParams} from "react-router-dom";
 import * as React from "react";
-import {useApp} from "../main";
+import {app} from "../main";
 
 export default function Controls({children}) {
-  let app = useApp()
   let params = useParams()
 
   return (

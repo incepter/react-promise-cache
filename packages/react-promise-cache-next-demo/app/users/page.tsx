@@ -2,24 +2,15 @@
 import * as React from "react";
 import Link from "next/link";
 import axios from "axios";
-import {useApi} from "react-promise-cache";
+import {Hydration, useApi} from "react-promise-cache";
 
 async function getUsers(): Promise<{id: string, username: string}[]> {
   let promise = await axios.get(`https://jsonplaceholder.typicode.com/users`);
   return promise.data
 }
 
-async function getUserDetails(id: number) {
-  let promise = await axios.get(`https://jsonplaceholder.typicode.com/users/${id}`);
-  return promise.data
-}
-
-export default async function Component({searchParams}) {
-  // @ts-ignore
-  let users = React.use(useApi(getUsers)())
-  // @ts-ignore
-  let user1 = React.use(useApi(getUserDetails)(1))
-  console.log('_______________________________________user 1 data', user1)
+export default function Component() {
+  let users = useApi(getUsers).use()
   return (
     <details open>
       <summary>Users List</summary>
@@ -29,6 +20,7 @@ export default async function Component({searchParams}) {
                                    href={`/users/${user.id}`}>{user.username}</Link>)}
         </div>
       </div>
+      <Hydration id="users_boundary" />
     </details>
   );
 }
