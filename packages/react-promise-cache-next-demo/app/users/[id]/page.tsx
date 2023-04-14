@@ -11,8 +11,6 @@ async function getUserDetails(id: number) {
 
 function RealThing({id}: { id: number }) {
   let user = useApi(getUserDetails).use(id);
-  // console.log('promise', promise)
-  // let user = React.use(promise);
   return (
     <details open>
       <summary>User {user.name} details</summary>
