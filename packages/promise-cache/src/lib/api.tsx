@@ -43,10 +43,7 @@ export function createApi<T, R, A extends unknown[]>(
 		realFunction = apiDefinition.producer;
 	}
 
-	function apiToken(...args: A): Promise<T> | State<T, R, A> {
-		if (!realFunction) {
-			throw new Error(`inject your ${name} function first`);
-		}
+	function ensureFunctionIsCached() {
 		if (!cache.has(realFunction)) {
 			let cacheToUse;
 			if (!isServer) {
@@ -60,7 +57,13 @@ export function createApi<T, R, A extends unknown[]>(
 			}
 			cache.set(realFunction, { name, calls: cacheToUse });
 		}
+	}
 
+	function apiToken(...args: A): Promise<T> | State<T, R, A> {
+		if (!realFunction) {
+			throw new Error(`inject your ${name} function first`);
+		}
+		ensureFunctionIsCached();
 		let memoizedArgs = memoize(args);
 		let functionCache = cache.get(realFunction)!.calls;
 
@@ -133,6 +136,7 @@ export function createApi<T, R, A extends unknown[]>(
 
 	apiToken.inject = function inject(fn) {
 		realFunction = fn;
+		ensureFunctionIsCached();
 		return apiToken;
 	};
 
