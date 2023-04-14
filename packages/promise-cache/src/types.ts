@@ -10,11 +10,13 @@ export interface ApiEntry<
 	T extends unknown,
 	R extends unknown,
 	A extends unknown[]
-> {
+> extends ApiCreationConfigObject<T, A>{
 	fn: ExtendedFn<T, R, A>;
-	producer?: Producer<T, A>;
-	// cache?: CacheConfig<T, R, A, string>,
 }
+
+export type ApiCreationConfigObject<T, A extends unknown[]> = {
+	producer?: Producer<T, A>,
+};
 
 type CacheConfig<T, R, A extends unknown[], Hash = string> = {
 	// enabled: false would disabled entirely caching
@@ -130,7 +132,7 @@ export type State<T, R, A extends unknown[]> =
 	| ErrorState<T, R, A>;
 
 export type Api<T, R, A extends unknown[]> = {
-	(...args: A): T | Promise<T>;
+	(...args: A): State<T, R, A> | Promise<T>;
 
 	use(...args: A): T;
 	evict(...args: A): Api<T, R, A>;
@@ -168,6 +170,7 @@ export type AppContextType<T extends DefaultShape> = {
 		any,
 		{
 			name: string;
+			api: Api<any, any, any>,
 			calls: Map<string, State<any, any, any>>;
 			listeners?: Record<number, (state: any) => void>;
 		}

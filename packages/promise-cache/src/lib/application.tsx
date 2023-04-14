@@ -1,5 +1,6 @@
 import * as React from "react";
 import {
+	Api,
 	ApiEntry,
 	AppEntry,
 	Application,
@@ -52,6 +53,7 @@ function createAppForShape(
 		any,
 		{
 			name: string;
+			api: Api<any, any, any>;
 			calls: Map<string, any>;
 			listeners?: Record<number, () => void>;
 		}
