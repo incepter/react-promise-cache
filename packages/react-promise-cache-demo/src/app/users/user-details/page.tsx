@@ -12,24 +12,12 @@ async function getUserDetails(id: number) {
 
 export function Component() {
   let {userId} = useParams();
-
   app.users.findById.inject(getUserDetails);
-  // console.log('AN STATE IS !!', app.users.findById.useState(11))
-
   // @ts-expect-error React.use isn't typed
   let user = React.use(app.users.findById(+userId));
-  // let result = app.users.findById.useState(+userId);
 
   let rerender = React.useState()[1];
   React.useEffect(() => app.users.findById.subscribe(rerender), [])
-  // if (result.status === "rejected") {
-  //   return null;
-  // }
-  // if (result.status === "pending") {
-  //   return null;
-  // }
-  //
-  // let user = result.data;
 
   return (
     <Controls>
