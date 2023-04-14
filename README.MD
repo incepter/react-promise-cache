@@ -7,15 +7,43 @@ The idea behind this library is that you will be able to cache promises that
 you receive from different functions in your application, hydrate them and
 boot from their data.
 
-```tsx
-import {useApp} from "react-promise-cache"
+## Simple Usage:
 
-function MyComponent() {
-  const app = useApp()
-  const {userId} = useParam()
-  const promise = app.users.findById(userId)
+```tsx
+// Users list
+import {useApi} from "react-promise-cache";
+
+async function getUsersList() {
+    let promise = await API.get<UserType[]>(`/users`);
+    return promise.data
+}
+
+function UsersList() {
+  const usersList = useApi(getUsersList)
+  const data = React.use(usersList())
+  // or simply:
+  const data = usersList.use();
   
-  const data = React.use(promise)
+  // do something with data
+}
+```
+
+```tsx
+// User details
+import {useApi} from "react-promise-cache";
+
+async function getUserDetailsList(id: number) {
+    let promise = await API.get<UserType[]>(`/users/${id}`);
+    return promise.data
+}
+
+function UserDetails({userId}) {
+  const userDetails = useApi(getUserDetailsList)
+  
+  const data = React.use(userDetails(userId))
+  // or simply:
+  const data = userDetails.use();
+  
   // do something with data
 }
 ```
