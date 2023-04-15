@@ -4,6 +4,7 @@ import {flushPromises} from "./testUtils";
 import {createApi, useApi} from "../lib/api";
 import {AppProvider} from "../lib/context";
 import {fireEvent} from "@testing-library/dom";
+import TestErrorBoundary from "./err-boundary";
 
 type User = {
   id: number;
@@ -13,7 +14,7 @@ type User = {
 let userSearch = async () => Promise.resolve({id: 15, name: "incepter"});
 
 describe("useApi tests", () => {
-  it("should call useAPI with use without deps", async () => {
+  it("should call useAPI with basic async form", async () => {
     function Component() {
       let api = useApi(userSearch);
       let data = api.use();
@@ -32,6 +33,54 @@ describe("useApi tests", () => {
     expect(screen.getByTestId("pending").innerHTML).toBe("pending");
     await act(async () => await flushPromises());
     expect(screen.getByTestId("data").innerHTML).toBe("incepter");
+  });
+  it("should call useAPI with basic sync form", async () => {
+    const syncStuff = (id: number) => id;
+
+    function Component() {
+      let api = useApi(syncStuff);
+      let data = api.useState(14);
+      // @ts-ignore
+      return <span data-testid="data">{data.data}</span>;
+    }
+
+    render(
+      <React.StrictMode>
+        <AppProvider>
+          <Component/>
+        </AppProvider>
+      </React.StrictMode>
+    );
+    await act(async () => await flushPromises());
+    expect(screen.getByTestId("data").innerHTML).toBe("14");
+  });
+  it("should call useAPI and treat a rejection", async () => {
+    const originalConsoleError = console.error;
+    console.error = () => {
+    }
+    const rejection = (reason) => Promise.reject(reason);
+
+    function Component() {
+      let api = useApi(rejection);
+      let data = api.use("testing");
+      return <span data-testid="data">{data}</span>;
+    }
+
+    render(
+      <React.StrictMode>
+        <AppProvider>
+          <TestErrorBoundary>
+            <React.Suspense fallback={<div data-testid="pending">pending</div>}>
+              <Component/>
+            </React.Suspense>
+          </TestErrorBoundary>
+        </AppProvider>
+      </React.StrictMode>
+    );
+    expect(screen.getByTestId("pending").innerHTML).toBe("pending");
+    await act(async () => await flushPromises());
+    expect(screen.getByTestId("error-boundary").innerHTML).toBe("testing");
+    console.error = originalConsoleError;
   });
   it("should call useAPI with use, and then evict and rerender again", async () => {
     let spy = jest.fn().mockImplementation(userSearch);
@@ -96,8 +145,9 @@ describe("useApi tests", () => {
     let api, api2, data, data2;
 
     function Component() {
-      // @ts-ignore
-      api = useApi(() => {}).inject(userSearch);
+      api = useApi(() => {
+        // @ts-ignore
+      }).inject(userSearch);
       api2 = useApi(userSearch);
       data = api.use();
       data2 = api2.use();

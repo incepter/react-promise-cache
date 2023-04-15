@@ -1,10 +1,9 @@
 import * as React from "react";
 import {
-  Api,
   AppContextType,
   DefaultShape,
-  ProviderProps,
-  State
+  InternalApiCacheType,
+  ProviderProps
 } from "../types";
 import {isServer} from "../utils";
 
@@ -33,15 +32,7 @@ export function AppProvider<T extends DefaultShape>({
   );
 }
 
-export function useCache<T extends DefaultShape>(): Map<
-  any,
-  {
-    name: string;
-    api: Api<any, any, any>,
-    calls: Map<string, State<any, any, any>>;
-    listeners?: Record<number, (state: any) => void>;
-  }
-> {
+export function useCache<T, R, A extends unknown[]>(): InternalApiCacheType<T, R, A> {
   let context = React.useContext(PromiseCacheContext);
   return React.useMemo(() => {
     if (!context) {

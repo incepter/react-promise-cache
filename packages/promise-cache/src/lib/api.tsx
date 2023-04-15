@@ -3,6 +3,7 @@ import {
   Api,
   ApiEntry,
   ErrorState,
+  InternalApiCacheType, InternalApiCacheValue,
   PendingState,
   Producer,
   State,
@@ -16,21 +17,13 @@ export function useApi<T, R, A extends unknown[]>(
   create: (...args: A) => T | Promise<T>,
   name = create.name
 ) {
-  let cache = useCache();
+  let cache = useCache<T, R, A>();
   return createApi<T, R, A>(create, cache, name);
 }
 
 export function createApi<T, R, A extends unknown[]>(
   apiDefinition: ApiEntry<T, R, A> | Producer<T, A> | undefined,
-  cache: Map<
-    any,
-    {
-      name: string;
-      api: Api<T, R, A>,
-      calls: Map<string, State<T, R, A>>;
-      listeners?: Record<number, (state: any) => void>;
-    }
-  >,
+  cache: InternalApiCacheType<T, R, A>,
   name: string
 ): Api<T, R, A> {
   let index = 0;
@@ -50,19 +43,41 @@ export function createApi<T, R, A extends unknown[]>(
     }
   }
 
+  function forceReloadCache() {
+    let cacheToUse;
+    if (!isServer) {
+      let hydratedCache = attemptHydratedCacheForApi(name);
+      if (hydratedCache) {
+        cacheToUse = hydratedCache;
+      }
+    }
+    if (!cacheToUse) {
+      cacheToUse = new Map();
+    }
+    let existingEntry = cache.get(realFunction);
+    // todo: reconcile with previous cache !
+    let cacheEntry: InternalApiCacheValue<T, R, A>;
+    if (existingEntry) {
+      cacheEntry = existingEntry;
+      cacheEntry.calls = cacheToUse;
+    } else {
+      cacheEntry = {
+        name,
+        api: apiToken,
+        calls: cacheToUse,
+        reload: forceReloadCache,
+        notify() {
+          notifyListeners(cacheEntry.listeners);
+        },
+      };
+    }
+
+    cache.set(realFunction, cacheEntry);
+  }
+
   function ensureFunctionIsCached() {
     if (!cache.has(realFunction)) {
-      let cacheToUse;
-      if (!isServer) {
-        let hydratedCache = attemptHydratedCacheForApi(name);
-        if (hydratedCache) {
-          cacheToUse = hydratedCache;
-        }
-      }
-      if (!cacheToUse) {
-        cacheToUse = new Map();
-      }
-      cache.set(realFunction, {name, calls: cacheToUse, api: apiToken});
+      forceReloadCache();
     }
   }
 
@@ -73,6 +88,7 @@ export function createApi<T, R, A extends unknown[]>(
     ensureFunctionIsCached();
     let memoizedArgs = memoize(args);
     let functionCache = cache.get(realFunction)!.calls;
+
 
     // existing
     if (functionCache.has(memoizedArgs)) {
@@ -240,7 +256,7 @@ function attemptHydratedCacheForApi(
         promise.status = "rejected";
         // @ts-ignore
         promise.reason = state.data;
-        state.promise = Promise.reject(state.data);
+        state.promise = promise;
       }
       cache.set(argsHash, state);
     }

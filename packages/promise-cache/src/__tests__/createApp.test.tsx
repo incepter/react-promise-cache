@@ -57,4 +57,10 @@ describe("createApp tests", () => {
 		let fn2 = app.users.search.inject(userSearch);
 		expect(fn).toBe(fn2);
 	});
+	it("should return empty object when undefined is given", () => {
+		// @ts-ignore
+		let { app } = createApp(undefined);
+
+		expect(app).toEqual({});
+	});
 });
