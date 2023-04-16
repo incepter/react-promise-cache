@@ -34,7 +34,7 @@ export interface ApiOptions<T, R, A extends unknown[]> {
   cacheConfig?: CacheConfig<T, R, A>,
 }
 
-type CacheConfig<T, R, A extends unknown[], Hash = string> = {
+export type CacheConfig<T, R, A extends unknown[], Hash = string> = {
   // enabled: false would disabled entirely caching
   // in dev mode, we may add a tight limit in dev mode to detect unwanted behavior
   enabled?: boolean;
@@ -57,7 +57,7 @@ type CacheConfig<T, R, A extends unknown[], Hash = string> = {
   // should give you the cache after each change to it so you will persist it again
   // it won't be reloaded right away, since it should stay the same
   // you can configure the deadline otherwise!
-  persist(cache: Map<Hash, ResolvedState<T, R, A>>): void;
+  persist?(cache: Map<Hash, ResolvedState<T, R, A>>): void;
 };
 
 export type InternalApiCacheType<T, R, A extends unknown[]> = Map<

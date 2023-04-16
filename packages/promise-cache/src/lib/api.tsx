@@ -1,7 +1,7 @@
 import * as React from "react";
 import {
   Api,
-  ApiEntry, ApiOptions,
+  ApiEntry, ApiOptions, CacheConfig,
   ErrorState,
   InternalApiCacheType, InternalApiCacheValue,
   PendingState,
@@ -23,26 +23,45 @@ export function useApi<T, R, A extends unknown[]>(
 }
 
 export function createApi<T, R, A extends unknown[]>(
-  apiDefinition: ApiEntry<T, R, A> | Producer<T, A> | undefined,
+  definition: ApiEntry<T, R, A> | Producer<T, A> | undefined,
   cache: InternalApiCacheType<T, R, A>,
   optionsFromOutside?: ApiOptions<T, R, A>,
 ): Api<T, R, A> {
   let index = 0;
-  let realFunction;
-  let options = optionsFromOutside;
-  let name = options && options.name;
+  let isCacheEnabled = true;
+  let apiCache: InternalApiCacheValue<T, R, A> | undefined;
+  let realFunction, name, options: ApiOptions<T, R, A> | undefined;
 
-  if (apiDefinition) {
-    if (typeof apiDefinition === "function") {
-      realFunction = apiDefinition;
-      name = options && options.name || realFunction.name;
-      if (cache.has(realFunction)) {
+  refresh(optionsFromOutside);
+
+  function refresh(newOptions) {
+    // let lastOptions = options; todo: remove pending timeouts
+    options = newOptions;
+    if (options) {
+      name = options.name;
+      if (options.cacheConfig) {
+        isCacheEnabled = !!options.cacheConfig.enabled;
+      } else {
+        isCacheEnabled = true;
+      }
+    }
+  }
+
+  if (definition) {
+    if (typeof definition === "function") {
+      realFunction = definition;
+      if (!name) {
+        name = realFunction.name;
+      }
+      if (cache.get(realFunction)) {
         return cache.get(realFunction)!.api;
       }
-    } else if (apiDefinition.producer) {
-      realFunction = apiDefinition.producer;
-      name = options && options.name || realFunction.name;
-      if (cache.has(realFunction)) {
+    } else if (definition.producer) {
+      realFunction = definition.producer;
+      if (!name) {
+        name = realFunction.name;
+      }
+      if (cache.get(realFunction)) {
         return cache.get(realFunction)!.api;
       }
     }
@@ -59,86 +78,79 @@ export function createApi<T, R, A extends unknown[]>(
     if (!cacheToUse) {
       cacheToUse = new Map();
     }
-    let existingEntry = cache.get(realFunction);
-    // todo: reconcile with previous cache !
-    let cacheEntry: InternalApiCacheValue<T, R, A>;
-    if (existingEntry) {
-      cacheEntry = existingEntry;
+    if (apiCache) {
       // spread new cache
       for (let [newKey, newState] of cacheToUse.entries()) {
-        cacheEntry.calls.set(newKey, newState);
+        apiCache.calls.set(newKey, newState);
       }
     } else {
-      cacheEntry = {
+      apiCache = {
         name: name!,
         api: apiToken,
         calls: cacheToUse,
         reload: forceReloadCache,
         notify() {
-          notifyListeners(cacheEntry.listeners);
+          notifyListeners(apiCache!.listeners);
         },
       };
+      cache.set(realFunction, apiCache);
     }
-
-    cache.set(realFunction, cacheEntry);
   }
 
   function ensureFunctionIsCached() {
     if (!cache.has(realFunction)) {
       forceReloadCache();
+    } else {
+      apiCache = cache.get(realFunction);
     }
   }
 
+  let idd = 0
   function apiToken(...args: A): Promise<T> | State<T, R, A> {
     if (!realFunction) {
       throw new Error(`inject your ${name} function first`);
     }
     ensureFunctionIsCached();
-    let memoizedArgs = memoize(args);
-    let functionCache = cache.get(realFunction)!.calls;
 
+    if (!isCacheEnabled) {
+      // dangerous! infinite loops probability
+      return realFunction.apply(null, args);
+    }
+    let runHash = memoize(args, options?.cacheConfig);
+    let functionCache = apiCache!.calls;
 
     // existing
-    if (functionCache.has(memoizedArgs)) {
-      let cacheData = functionCache.get(memoizedArgs)!;
+    if (functionCache.has(runHash)) {
+      let cacheData = functionCache.get(runHash)!;
       // either with a promise or sync value
       return cacheData.promise ? cacheData.promise : cacheData;
     }
     let argsCopy = Array.from(args);
-    let dataToCache = realFunction.apply(null, args);
+    let data = realFunction.apply(null, args);
 
-    if (dataToCache && typeof dataToCache.then === "function") {
-      trackPromiseResult(
-        memoizedArgs,
-        argsCopy,
-        dataToCache,
-        cache.get(realFunction)!
-      );
+    if (data && typeof data.then === "function") {
+      trackPromiseResult(runHash, argsCopy, data, apiCache!);
     } else {
       // sync, no promise involved, mostly useReducer or useState
-      functionCache.set(memoizedArgs, {
+      functionCache.set(runHash, {
+        data,
         args: argsCopy,
-        data: dataToCache,
         status: "fulfilled",
       } as SuccessState<T, A>);
-      notifyListeners(cache.get(realFunction)!.listeners);
+      notifyListeners(apiCache!.listeners);
     }
-    let cacheData = functionCache.get(memoizedArgs)!;
+    let cacheData = functionCache.get(runHash)!;
     return cacheData.promise ? cacheData.promise : cacheData;
   }
 
   apiToken.evict = function evict(...args: A) {
-    let fnCache = cache.get(realFunction)!; // todo: throw
-    let cacheCalls = fnCache.calls;
-    let memoizedArgs = memoize(args);
-    if (cacheCalls.has(memoizedArgs)) {
-      cacheCalls.delete(memoizedArgs);
-      if (fnCache.listeners) {
-        React.startTransition(() => {
-          Object.values(fnCache.listeners!).forEach((cb) => cb({}));
-        });
-      }
+    let argsHash = memoize(args, options?.cacheConfig);
+
+    if (apiCache!.calls.has(argsHash)) {
+      apiCache!.calls.delete(argsHash);
+      notifyListeners(apiCache!.listeners);
     }
+
     return apiToken;
   };
 
@@ -148,40 +160,40 @@ export function createApi<T, R, A extends unknown[]>(
 
   apiToken.useState = function useState(...args: A) {
     apiToken.apply(null, args);
-
-    let memoizedArgs = memoize(args);
-    let functionCache = cache.get(realFunction)!.calls;
+    let runHash = memoize(args, options?.cacheConfig);
 
     let rerender = React.useState()[1];
     React.useEffect(() => apiToken.subscribe(rerender), []);
 
-    return functionCache.get(memoizedArgs)!;
+    return apiCache!.calls.get(runHash)!;
   };
 
   apiToken.getState = function useState(...args: A) {
     apiToken.apply(null, args);
 
-    let memoizedArgs = memoize(args);
-    return cache.get(realFunction)!.calls.get(memoizedArgs)!;
+    let memoizedArgs = memoize(args, options?.cacheConfig);
+    return apiCache!.calls.get(memoizedArgs)!;
   };
 
   apiToken.inject = function inject(fn, opts?: ApiOptions<T, R, A>) {
     options = opts;
     realFunction = fn;
-    name = options && options.name || realFunction.name;
+    refresh(opts);
+    if (!name) {
+      name = realFunction.name;
+    }
     ensureFunctionIsCached();
     return apiToken;
   };
 
   apiToken.subscribe = function subscribe(cb) {
     let id = ++index;
-    let fnCache = cache.get(realFunction)!;
-    if (!fnCache.listeners) {
-      fnCache.listeners = {};
+    if (!apiCache!.listeners) {
+      apiCache!.listeners = {};
     }
-    fnCache.listeners[id] = cb;
+    apiCache!.listeners[id] = cb;
     return () => {
-      delete fnCache.listeners![id];
+      delete apiCache!.listeners![id];
     };
   };
 
@@ -239,8 +251,11 @@ function trackPromiseResult<T, R, A extends unknown[]>(
   );
 }
 
-function memoize(args) {
-  return JSON.stringify(args); // todo: do it right!
+function memoize(args, options?: CacheConfig<any, any, any>) {
+  if (options && typeof options.hash === "function") {
+    return options.hash(args);
+  }
+  return JSON.stringify(args);
 }
 
 function attemptHydratedCacheForApi(
@@ -252,7 +267,7 @@ function attemptHydratedCacheForApi(
     for (let [argsHash, state] of Object.entries(hydratedCache[name])) {
       if (state.status === "fulfilled") {
         let promise = Promise.resolve(state.data);
-        // hack react use..
+        // work around react.use..
         // @ts-ignore
         promise.status = "fulfilled";
         // @ts-ignore
@@ -260,7 +275,7 @@ function attemptHydratedCacheForApi(
         state.promise = promise;
       }
       if (state.status === "rejected") {
-        // hack react use..
+        // work around react.use..
         let promise = Promise.resolve(state.data);
         // @ts-ignore
         promise.status = "rejected";
