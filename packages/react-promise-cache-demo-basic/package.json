@@ -13,7 +13,7 @@
     "react": "0.0.0-experimental-dd5365878-20230407",
     "react-dom": "0.0.0-experimental-dd5365878-20230407",
     "react-router-dom": "6.10.0",
-    "react-promise-cache": "workspace:^0.0.6"
+    "react-promise-cache": "workspace:^0.0.7"
   },
   "devDependencies": {
     "@types/react": "^18.0.28",
