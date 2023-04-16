@@ -27,6 +27,7 @@ export type InternalApiCacheValue<T, R, A extends unknown[]> = {
   reload: () => void,
   calls: Map<string, State<T, R, A>>;
   listeners?: Record<number, (state: any) => void>;
+  timeouts: Map<string, ReturnType<typeof setTimeout>>;
 }
 
 export interface ApiOptions<T, R, A extends unknown[]> {
@@ -45,10 +46,11 @@ export type CacheConfig<T, R, A extends unknown[], Hash = string> = {
   // and then it will create another one again! this may lead to infinite loops
   // we may add a count of the sequential failures or decisions not to cache, so
   // retry can be implemented just using that.
-  cache?(s: ResolvedState<T, R, A>): boolean;
+  // todo: maybe later!
+  // cache?(s: ResolvedState<T, R, A>): boolean;
   // the deadline after which a state that will be cached will become stale
   // and thus would be automatically evicted
-  deadline?: number | ((s: SuccessState<T, A>) => number);
+  deadline?: number | ((s: T) => number);
   // loads either synchronously or asynchronously the cache
   // can be used with either localStorage or AsyncStorage
   load?():
