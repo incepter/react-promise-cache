@@ -359,7 +359,7 @@ describe("useApi tests", () => {
     const cache = new Map();
 
     function Component() {
-      let api = createApi({fn: spy, producer: spy}, cache, "test");
+      let api = createApi({fn: spy, producer: spy}, cache, {name: "test"});
       let data = api.useState("component - 1");
 
       if (data.status === "pending") {
@@ -373,7 +373,7 @@ describe("useApi tests", () => {
     }
 
     function Component2() {
-      let api = createApi({fn: spy, producer: spy}, cache, "test");
+      let api = createApi({fn: spy, producer: spy}, cache, {name: "test"});
       let rerender = React.useState({})[1];
       return (
         <div>

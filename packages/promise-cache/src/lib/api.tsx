@@ -1,7 +1,7 @@
 import * as React from "react";
 import {
   Api,
-  ApiEntry,
+  ApiEntry, ApiOptions,
   ErrorState,
   InternalApiCacheType, InternalApiCacheValue,
   PendingState,
@@ -13,30 +13,35 @@ import {isServer, maybeWindow} from "../utils";
 import {useImpl} from "../useImpl";
 import {useCache} from "./context";
 
+
 export function useApi<T, R, A extends unknown[]>(
   create: (...args: A) => T | Promise<T>,
-  name = create.name
+  options?: ApiOptions<T, R, A>,
 ) {
   let cache = useCache<T, R, A>();
-  return createApi<T, R, A>(create, cache, name);
+  return createApi<T, R, A>(create, cache, options);
 }
 
 export function createApi<T, R, A extends unknown[]>(
   apiDefinition: ApiEntry<T, R, A> | Producer<T, A> | undefined,
   cache: InternalApiCacheType<T, R, A>,
-  name: string
+  optionsFromOutside?: ApiOptions<T, R, A>,
 ): Api<T, R, A> {
   let index = 0;
   let realFunction;
+  let options = optionsFromOutside;
+  let name = options && options.name;
 
   if (apiDefinition) {
     if (typeof apiDefinition === "function") {
       realFunction = apiDefinition;
+      name = options && options.name || realFunction.name;
       if (cache.has(realFunction)) {
         return cache.get(realFunction)!.api;
       }
     } else if (apiDefinition.producer) {
       realFunction = apiDefinition.producer;
+      name = options && options.name || realFunction.name;
       if (cache.has(realFunction)) {
         return cache.get(realFunction)!.api;
       }
@@ -44,9 +49,9 @@ export function createApi<T, R, A extends unknown[]>(
   }
 
   function forceReloadCache() {
-    let cacheToUse;
+    let cacheToUse: Map<string, State<T, R, A>> | undefined;
     if (!isServer) {
-      let hydratedCache = attemptHydratedCacheForApi(name);
+      let hydratedCache = attemptHydratedCacheForApi(name!);
       if (hydratedCache) {
         cacheToUse = hydratedCache;
       }
@@ -59,10 +64,13 @@ export function createApi<T, R, A extends unknown[]>(
     let cacheEntry: InternalApiCacheValue<T, R, A>;
     if (existingEntry) {
       cacheEntry = existingEntry;
-      cacheEntry.calls = cacheToUse;
+      // spread new cache
+      for (let [newKey, newState] of cacheToUse.entries()) {
+        cacheEntry.calls.set(newKey, newState);
+      }
     } else {
       cacheEntry = {
-        name,
+        name: name!,
         api: apiToken,
         calls: cacheToUse,
         reload: forceReloadCache,
@@ -157,8 +165,10 @@ export function createApi<T, R, A extends unknown[]>(
     return cache.get(realFunction)!.calls.get(memoizedArgs)!;
   };
 
-  apiToken.inject = function inject(fn) {
+  apiToken.inject = function inject(fn, opts?: ApiOptions<T, R, A>) {
+    options = opts;
     realFunction = fn;
+    name = options && options.name || realFunction.name;
     ensureFunctionIsCached();
     return apiToken;
   };

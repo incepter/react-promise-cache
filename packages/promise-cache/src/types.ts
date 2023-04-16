@@ -12,14 +12,13 @@ export interface ApiEntry<
   T extends unknown,
   R extends unknown,
   A extends unknown[]
-> extends ApiCreationConfigObject<T, A> {
+> extends ApiCreationConfigObject<T, R, A> {
   fn: ExtendedFn<T, R, A>;
 }
 
-export type ApiCreationConfigObject<T, A extends unknown[]> = {
+export interface ApiCreationConfigObject<T, R, A extends unknown[]> {
   producer?: Producer<T, A>,
-};
-
+}
 
 export type InternalApiCacheValue<T, R, A extends unknown[]> = {
   name: string;
@@ -30,10 +29,10 @@ export type InternalApiCacheValue<T, R, A extends unknown[]> = {
   listeners?: Record<number, (state: any) => void>;
 }
 
-export type InternalApiCacheType<T, R, A extends unknown[]> = Map<
-  any,
-  InternalApiCacheValue<T, R, A>
->
+export interface ApiOptions<T, R, A extends unknown[]> {
+  name?: string,
+  cacheConfig?: CacheConfig<T, R, A>,
+}
 
 type CacheConfig<T, R, A extends unknown[], Hash = string> = {
   // enabled: false would disabled entirely caching
@@ -60,6 +59,11 @@ type CacheConfig<T, R, A extends unknown[], Hash = string> = {
   // you can configure the deadline otherwise!
   persist(cache: Map<Hash, ResolvedState<T, R, A>>): void;
 };
+
+export type InternalApiCacheType<T, R, A extends unknown[]> = Map<
+  any,
+  InternalApiCacheValue<T, R, A>
+>
 
 export type AppEntry<T extends DefaultShape> = {
   [resource in keyof T]: {
@@ -155,7 +159,7 @@ export type Api<T, R, A extends unknown[]> = {
   evict(...args: A): Api<T, R, A>;
   getState(...args: A): State<T, R, A>;
   useState(...args: A): State<T, R, A>;
-  inject(fn: (...args: A) => T | Promise<T>): Api<T, R, A>;
+  inject(fn: (...args: A) => T | Promise<T>, options?: ApiOptions<T, R, A>): Api<T, R, A>;
   subscribe(cb: (t: T | Promise<T> | any) => void): () => void;
 };
 

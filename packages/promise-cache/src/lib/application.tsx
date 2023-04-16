@@ -50,7 +50,7 @@ function createAppForShape(
     let currentResource = {};
     for (let [apiName, apiDefinition] of Object.entries(resource)) {
       let name = `${resourceName}_${apiName}`;
-      currentResource[apiName] = createApi(apiDefinition, cache, name);
+      currentResource[apiName] = createApi(apiDefinition, cache, {name});
     }
     app[resourceName] = currentResource;
   }
