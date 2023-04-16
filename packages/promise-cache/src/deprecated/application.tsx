@@ -8,8 +8,8 @@ import {
   InternalApiCacheType,
   ProviderProps,
 } from "../types";
-import {AppProvider, PromiseCacheContext} from "./context";
-import {createApi} from "./api";
+import {AppProvider, PromiseCacheContext} from "../lib/context";
+import {createApi} from "../lib/api";
 
 export function useApp<T extends DefaultShape>(): Application<T> {
   let result = React.useContext(PromiseCacheContext);
