@@ -3,7 +3,7 @@
   "license": "MIT",
   "author": "incepter",
   "sideEffects": false,
-  "version": "0.0.7",
+  "version": "0.0.8",
   "main": "dist/umd/index",
   "types": "dist/es/index",
   "module": "dist/es/index",
