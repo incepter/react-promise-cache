@@ -3,12 +3,12 @@ import {
   Api,
   ApiEntry,
   ApiOptions,
-  CacheConfig,
+  CacheConfig, ErrorPromise,
   ErrorState,
-  InternalApiCacheType, InternalApiCacheValue,
+  InternalApiCacheType, InternalApiCacheValue, PendingPromise,
   PendingState,
   Producer,
-  State,
+  State, SuccessPromise,
   SuccessState,
 } from "../types";
 import {isServer, maybeWindow} from "../utils";
@@ -75,7 +75,7 @@ export function createApi<T, R, A extends unknown[]>(
   function forceReloadCache() {
     let callsCacheToUse: Map<string, State<T, R, A>> | undefined;
     if (!isServer && isCacheEnabled) {
-      let hydratedCache = attemptHydratedCacheForApi(name);
+      let hydratedCache = attemptHydratedCacheForApi<T, R, A>(name);
       if (hydratedCache) {
         callsCacheToUse = hydratedCache;
       }
@@ -118,49 +118,53 @@ export function createApi<T, R, A extends unknown[]>(
     }
     ensureFunctionIsCached();
 
-    let callHash = memoize(args, options?.cacheConfig);
-    let exitingFunctionCache = cache.get(realFunction)!;
-    let cachedFunctionCalls = exitingFunctionCache.calls;
+    let currentCallHash = memoize(args, options && options.cacheConfig);
+    let functionCache = cache.get(realFunction)!;
+    let cachedFunctionCalls = functionCache.calls;
 
     // existing
-    if (cachedFunctionCalls.has(callHash) && isCacheEnabled) {
-      let cacheData = cachedFunctionCalls.get(callHash)!;
+    if (cachedFunctionCalls.has(currentCallHash) && isCacheEnabled) {
+      let cacheData = cachedFunctionCalls.get(currentCallHash)!;
       // either with a promise or sync value
       return cacheData.promise ? cacheData.promise : cacheData;
     }
 
-    // cache is not enabled, so cache until next run occurs
-    cachedFunctionCalls.delete(callHash);
+    // cache is not enabled, so always cache until next run occurs
+    cachedFunctionCalls.delete(currentCallHash);
 
     let argsCopy = Array.from(args) as A;
-    let data = realFunction.apply(null, args);
+    let result = realFunction.apply(null, args);
 
-    if (data && typeof data.then === "function") {
-      trackPromiseResult(callHash, argsCopy, data, exitingFunctionCache, options?.cacheConfig);
+    if (result && typeof result.then === "function") {
+      trackPromiseResult(
+        functionCache, result,
+        currentCallHash, argsCopy, options && options.cacheConfig
+      );
     } else {
       // sync, no promise involved, mostly useReducer or useState
-      cachedFunctionCalls.set(callHash, {
-        data,
-        args: argsCopy,
-        status: "fulfilled",
-      } as SuccessState<T, A>);
-      notifyListeners(exitingFunctionCache.listeners);
+      cachedFunctionCalls.set(
+        currentCallHash,
+        {data: result, args: argsCopy, status: "fulfilled"} as SuccessState<T, A>
+      );
+      notifyListeners(functionCache.listeners);
     }
-    let cacheData = cachedFunctionCalls.get(callHash)!;
+    let cacheData = cachedFunctionCalls.get(currentCallHash)!;
     return cacheData.promise ? cacheData.promise : cacheData;
   }
 
   apiToken.evict = function evict(...args: A) {
-    let argsHash = memoize(args, options?.cacheConfig);
+    let hashToEvict = memoize(args, options?.cacheConfig);
 
-    let exitingFunctionCache = cache.get(realFunction)!;
-    let cachedFunctionCalls = exitingFunctionCache.calls;
+    let functionCache = cache.get(realFunction)!;
+    let cachedFunctionCalls = functionCache.calls;
 
-    if (cachedFunctionCalls.has(argsHash)) {
-      cachedFunctionCalls.delete(argsHash);
-      clearTimeout(exitingFunctionCache.timeouts.get(argsHash));
-      exitingFunctionCache.timeouts.delete(argsHash);
-      notifyListeners(exitingFunctionCache.listeners);
+    if (cachedFunctionCalls.has(hashToEvict)) {
+      cachedFunctionCalls.delete(hashToEvict);
+
+      clearTimeout(functionCache.timeouts.get(hashToEvict));
+      functionCache.timeouts.delete(hashToEvict);
+
+      notifyListeners(functionCache.listeners);
     }
 
     return apiToken;
@@ -219,40 +223,40 @@ function notifyListeners(listeners?: Record<number, ({}) => void>) {
 }
 
 function trackPromiseResult<T, R, A extends unknown[]>(
-  callHash: string,
-  argsCopy: A,
-  promise: Promise<T>,
   functionCache: InternalApiCacheValue<T, R, A>,
+  promise: Promise<T>,
+  hash: string,
+  args: A,
   cacheConfig?: CacheConfig<T, R, A>
 ) {
   let callsCache = functionCache.calls;
-  callsCache.set(callHash, {
-    args: argsCopy,
+  callsCache.set(hash, {
+    args: args,
     data: promise,
     status: "pending",
     promise: promise,
   } as PendingState<T, A>);
 
   let functionTimeouts = functionCache.timeouts;
-  if (functionTimeouts.has(callHash)) {
-    clearTimeout(functionTimeouts.get(callHash));
-    functionTimeouts.delete(callHash);
+  if (functionTimeouts.has(hash)) {
+    clearTimeout(functionTimeouts.get(hash));
+    functionTimeouts.delete(hash);
   }
 
   notifyListeners(functionCache.listeners);
 
   promise.then(
     (result) => {
-      callsCache.set(callHash, {
+      callsCache.set(hash, {
         data: result,
-        args: argsCopy,
+        args: args,
         status: "fulfilled",
         promise: promise,
       } as SuccessState<T, A>);
 
 
       let deadline: number | null = null;
-      let configuredDeadline = cacheConfig?.deadline
+      let configuredDeadline = cacheConfig && cacheConfig.deadline
       if (typeof configuredDeadline === "function") {
         deadline = configuredDeadline(result) || null
       } else if (typeof configuredDeadline === "number") {
@@ -261,21 +265,21 @@ function trackPromiseResult<T, R, A extends unknown[]>(
 
       if (deadline) {
         let id = setTimeout(() => {
-          functionCache.calls.delete(callHash);
-          functionTimeouts.delete(callHash);
-          clearTimeout(functionTimeouts.get(callHash));
+          functionCache.calls.delete(hash);
+          functionTimeouts.delete(hash);
+          clearTimeout(functionTimeouts.get(hash));
           notifyListeners(functionCache.listeners);
         }, deadline);
-        functionTimeouts.set(callHash, id);
+        functionTimeouts.set(hash, id);
       }
 
       notifyListeners(functionCache.listeners);
       return result;
     },
     (reason) => {
-      callsCache.set(callHash, {
+      callsCache.set(hash, {
         data: reason,
-        args: argsCopy,
+        args: args,
         status: "rejected",
         promise: promise,
       } as ErrorState<T, R, A>);
@@ -292,29 +296,32 @@ function memoize(args, options?: CacheConfig<any, any, any>) {
   return JSON.stringify(args);
 }
 
-function attemptHydratedCacheForApi(
+function attemptHydratedCacheForApi<T, R, A extends unknown[]>(
   name: string
-): Map<string, State<any, any, any>> | undefined {
+): Map<string, State<T, R, A>> | undefined {
   let hydratedCache = maybeWindow!.__HYDRATED_APP_CACHE__;
   if (hydratedCache && hydratedCache[name]) {
     let cache = new Map();
     for (let [argsHash, state] of Object.entries(hydratedCache[name])) {
       if (state.status === "fulfilled") {
-        let promise = Promise.resolve(state.data);
+        let promise = Promise.resolve(state.data) as SuccessPromise<any>;
         // work around react.use..
-        // @ts-ignore
         promise.status = "fulfilled";
-        // @ts-ignore
         promise.value = state.data;
         state.promise = promise;
       }
       if (state.status === "rejected") {
+        // reject here causes chaos!
+        let promise = Promise.resolve(state.data) as ErrorPromise<any, any>;
         // work around react.use..
-        let promise = Promise.resolve(state.data);
-        // @ts-ignore
         promise.status = "rejected";
-        // @ts-ignore
         promise.reason = state.data;
+        state.promise = promise;
+      }
+      if (state.status === "pending") {
+        let promise = new Promise(res => {}) as PendingPromise<any>;
+        // work around react.use..
+        promise.status = "pending";
         state.promise = promise;
       }
       cache.set(argsHash, state);

@@ -123,11 +123,25 @@ export type Application<T extends DefaultShape> = {
   };
 };
 
+export interface PendingPromise<T> extends Promise<T> {
+  status: "pending",
+}
+
+export interface SuccessPromise<T> extends Promise<T> {
+  value: T,
+  status: "fulfilled",
+}
+
+export interface ErrorPromise<T, R> extends Promise<T> {
+  reason: R,
+  status: "rejected",
+}
+
 export type PendingState<T, A extends unknown[]> = {
   args: A;
   data: Promise<T>;
   status: "pending";
-  promise: Promise<T>;
+  promise: PendingPromise<T>;
   hydrated?: true;
 };
 export type SuccessState<T, A extends unknown[]> = {
