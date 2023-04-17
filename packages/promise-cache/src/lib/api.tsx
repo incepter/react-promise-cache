@@ -153,7 +153,7 @@ export function createApi<T, R, A extends unknown[]>(
   }
 
   apiToken.evict = function evict(...args: A) {
-    let hashToEvict = memoize(args, options?.cacheConfig);
+    let hashToEvict = memoize(args, options && options.cacheConfig);
 
     let functionCache = cache.get(realFunction)!;
     let cachedFunctionCalls = functionCache.calls;
@@ -182,7 +182,7 @@ export function createApi<T, R, A extends unknown[]>(
   };
 
   apiToken.getState = function useState(...args: A) {
-    let memoizedArgs = memoize(args, options?.cacheConfig);
+    let memoizedArgs = memoize(args, options && options.cacheConfig);
     apiToken.apply(null, args);
 
     return cache.get(realFunction)!.calls.get(memoizedArgs)!;

@@ -18,7 +18,7 @@
     "next": "canary",
     "react": "0.0.0-experimental-dd5365878-20230407",
     "react-dom": "0.0.0-experimental-dd5365878-20230407",
-    "react-promise-cache": "workspace:^0.0.8",
+    "react-promise-cache": "workspace:^0.0.9",
     "typescript": "5.0.3"
   }
 }
