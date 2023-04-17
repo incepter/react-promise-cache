@@ -9,13 +9,14 @@ export function Hydration({id}: { id: string }) {
   }
   if (!isServer) {
     let cache = useCache();
-    let existingHtml = React.useRef<string | undefined>();
+    let existingHtml = React.useRef<string | null>();
     if (!existingHtml.current) {
-      existingHtml.current = document.getElementById(id)?.innerHTML;
+      let existingContainer = document.getElementById(id);
+      existingHtml.current = existingContainer && existingContainer.innerHTML;
     }
 
     React.useEffect(() => {
-      let hasHydratedData = !!maybeWindow?.__HYDRATED_APP_CACHE__;
+      let hasHydratedData = !!(maybeWindow && maybeWindow.__HYDRATED_APP_CACHE__);
       if (!hasHydratedData) {
         return;
       }

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { act, render, screen } from "@testing-library/react";
-import { api, createApp } from "../lib/application";
+import { api, createApp } from "../deprecated/application";
 import { flushPromises } from "./testUtils";
 import { useImpl } from "../useImpl";
 

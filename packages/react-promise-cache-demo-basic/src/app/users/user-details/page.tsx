@@ -12,7 +12,7 @@ export async function getUserDetails(id: number) {
 export function Component() {
   let {userId} = useParams();
 
-  let api = useApi(getUserDetails);
+  let api = useApi(getUserDetails, {cacheConfig: {deadline: 2000}});
   let user = api.use(+userId!);
 
   let rerender = React.useState()[1];

@@ -12,14 +12,13 @@ export interface ApiEntry<
   T extends unknown,
   R extends unknown,
   A extends unknown[]
-> extends ApiCreationConfigObject<T, A> {
+> extends ApiCreationConfigObject<T, R, A> {
   fn: ExtendedFn<T, R, A>;
 }
 
-export type ApiCreationConfigObject<T, A extends unknown[]> = {
+export interface ApiCreationConfigObject<T, R, A extends unknown[]> {
   producer?: Producer<T, A>,
-};
-
+}
 
 export type InternalApiCacheValue<T, R, A extends unknown[]> = {
   name: string;
@@ -28,14 +27,15 @@ export type InternalApiCacheValue<T, R, A extends unknown[]> = {
   reload: () => void,
   calls: Map<string, State<T, R, A>>;
   listeners?: Record<number, (state: any) => void>;
+  timeouts: Map<string, ReturnType<typeof setTimeout>>;
 }
 
-export type InternalApiCacheType<T, R, A extends unknown[]> = Map<
-  any,
-  InternalApiCacheValue<T, R, A>
->
+export interface ApiOptions<T, R, A extends unknown[]> {
+  name?: string,
+  cacheConfig?: CacheConfig<T, R, A>,
+}
 
-type CacheConfig<T, R, A extends unknown[], Hash = string> = {
+export type CacheConfig<T, R, A extends unknown[], Hash = string> = {
   // enabled: false would disabled entirely caching
   // in dev mode, we may add a tight limit in dev mode to detect unwanted behavior
   enabled?: boolean;
@@ -46,10 +46,11 @@ type CacheConfig<T, R, A extends unknown[], Hash = string> = {
   // and then it will create another one again! this may lead to infinite loops
   // we may add a count of the sequential failures or decisions not to cache, so
   // retry can be implemented just using that.
-  cache?(s: ResolvedState<T, R, A>): boolean;
+  // todo: maybe later!
+  // cache?(s: ResolvedState<T, R, A>): boolean;
   // the deadline after which a state that will be cached will become stale
   // and thus would be automatically evicted
-  deadline?: number | ((s: SuccessState<T, A>) => number);
+  deadline?: number | ((s: T) => number);
   // loads either synchronously or asynchronously the cache
   // can be used with either localStorage or AsyncStorage
   load?():
@@ -58,8 +59,13 @@ type CacheConfig<T, R, A extends unknown[], Hash = string> = {
   // should give you the cache after each change to it so you will persist it again
   // it won't be reloaded right away, since it should stay the same
   // you can configure the deadline otherwise!
-  persist(cache: Map<Hash, ResolvedState<T, R, A>>): void;
+  persist?(cache: Map<Hash, ResolvedState<T, R, A>>): void;
 };
+
+export type InternalApiCacheType<T, R, A extends unknown[]> = Map<
+  any,
+  InternalApiCacheValue<T, R, A>
+>
 
 export type AppEntry<T extends DefaultShape> = {
   [resource in keyof T]: {
@@ -117,11 +123,25 @@ export type Application<T extends DefaultShape> = {
   };
 };
 
+export interface PendingPromise<T> extends Promise<T> {
+  status: "pending",
+}
+
+export interface SuccessPromise<T> extends Promise<T> {
+  value: T,
+  status: "fulfilled",
+}
+
+export interface ErrorPromise<T, R> extends Promise<T> {
+  reason: R,
+  status: "rejected",
+}
+
 export type PendingState<T, A extends unknown[]> = {
   args: A;
   data: Promise<T>;
   status: "pending";
-  promise: Promise<T>;
+  promise: PendingPromise<T>;
   hydrated?: true;
 };
 export type SuccessState<T, A extends unknown[]> = {
@@ -155,7 +175,7 @@ export type Api<T, R, A extends unknown[]> = {
   evict(...args: A): Api<T, R, A>;
   getState(...args: A): State<T, R, A>;
   useState(...args: A): State<T, R, A>;
-  inject(fn: (...args: A) => T | Promise<T>): Api<T, R, A>;
+  inject(fn: (...args: A) => T | Promise<T>, options?: ApiOptions<T, R, A>): Api<T, R, A>;
   subscribe(cb: (t: T | Promise<T> | any) => void): () => void;
 };
 

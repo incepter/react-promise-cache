@@ -1,5 +1,5 @@
 import * as React from "react";
-import {api, createApp} from "../lib/application";
+import {api, createApp} from "../deprecated/application";
 import {expect} from "@jest/globals";
 
 type User = {
