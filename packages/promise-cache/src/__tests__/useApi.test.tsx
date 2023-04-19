@@ -1,15 +1,10 @@
 import * as React from "react";
 import {act, render, screen} from "@testing-library/react";
 import {flushPromises} from "./testUtils";
-import {createApi, useApi} from "../lib/api";
+import {getOrCreateApi, useApi} from "../lib/api";
 import {AppProvider} from "../lib/context";
 import {fireEvent} from "@testing-library/dom";
 import TestErrorBoundary from "./err-boundary";
-
-type User = {
-  id: number;
-  name: string;
-};
 
 let userSearch = async () => Promise.resolve({id: 15, name: "incepter"});
 
@@ -139,31 +134,6 @@ describe("useApi tests", () => {
     await act(async () => await flushPromises());
     expect(data).toBe(data2);
     expect(api).toBe(api2);
-  });
-  // only way not to get same ref is to "inject" later or "re-inject"
-  it("should not get the same api reference and manipulate same state", async () => {
-    let api, api2, data, data2;
-
-    function Component() {
-      api = useApi(() => {
-        // @ts-ignore
-      }).inject(userSearch);
-      api2 = useApi(userSearch);
-      data = api.use();
-      data2 = api2.use();
-      return null;
-    }
-
-    render(
-      <React.StrictMode>
-        <React.Suspense fallback={<div data-testid="pending">pending</div>}>
-          <Component/>
-        </React.Suspense>
-      </React.StrictMode>
-    );
-    await act(async () => await flushPromises());
-    expect(data).toBe(data2);
-    expect(api).not.toBe(api2);
   });
   it("should not react to changes to the same api from other components," +
     " because it isn't subscribing", async () => {
@@ -359,7 +329,7 @@ describe("useApi tests", () => {
     const cache = new Map();
 
     function Component() {
-      let api = createApi({fn: spy, producer: spy}, cache, {name: "test"});
+      let api = getOrCreateApi(spy, cache, {name: "test"});
       let data = api.useState("component - 1");
 
       if (data.status === "pending") {
@@ -373,7 +343,7 @@ describe("useApi tests", () => {
     }
 
     function Component2() {
-      let api = createApi({fn: spy, producer: spy}, cache, {name: "test"});
+      let api = getOrCreateApi(spy, cache, {name: "test"});
       let rerender = React.useState({})[1];
       return (
         <div>

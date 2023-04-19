@@ -1,24 +1,6 @@
 import * as React from "react";
 
-export type SomethingIrrelevant = {};
 export type Producer<T, A extends unknown[]> = (...args: A) => T | Promise<T>;
-export type DefaultFn<T, R, A extends unknown[]> = Producer<T, A>;
-export type ExtendedFn<T, R, A extends unknown[]> =
-  | DefaultFn<T, R, A>
-  | SomethingIrrelevant;
-export type DefaultShape = Record<string, Record<string, any>>;
-
-export interface ApiEntry<
-  T extends unknown,
-  R extends unknown,
-  A extends unknown[]
-> extends ApiCreationConfigObject<T, R, A> {
-  fn: ExtendedFn<T, R, A>;
-}
-
-export interface ApiCreationConfigObject<T, R, A extends unknown[]> {
-  producer?: Producer<T, A>,
-}
 
 export type InternalApiCacheValue<T, R, A extends unknown[]> = {
   name: string;
@@ -66,62 +48,6 @@ export type InternalApiCacheType<T, R, A extends unknown[]> = Map<
   any,
   InternalApiCacheValue<T, R, A>
 >
-
-export type AppEntry<T extends DefaultShape> = {
-  [resource in keyof T]: {
-    [api in keyof T[resource]]: ApiEntry<
-      T[resource][api]["fn"] extends ExtendedFn<
-          infer T,
-          infer R,
-          infer A extends unknown[]
-        >
-        ? T
-        : never,
-      T[resource][api]["fn"] extends ExtendedFn<
-          infer T,
-          infer R,
-          infer A extends unknown[]
-        >
-        ? R
-        : never,
-      T[resource][api]["fn"] extends ExtendedFn<
-          infer T,
-          infer R,
-          infer A extends unknown[]
-        >
-        ? A
-        : never
-    >;
-  };
-};
-
-export type Application<T extends DefaultShape> = {
-  [resource in keyof T]: {
-    [api in keyof T[resource]]: Api<
-      T[resource][api]["fn"] extends ExtendedFn<
-          infer T,
-          infer R,
-          infer A extends unknown[]
-        >
-        ? T
-        : never,
-      T[resource][api]["fn"] extends ExtendedFn<
-          infer T,
-          infer R,
-          infer A extends unknown[]
-        >
-        ? R
-        : never,
-      T[resource][api]["fn"] extends ExtendedFn<
-          infer T,
-          infer R,
-          infer A extends unknown[]
-        >
-        ? A
-        : never
-    >;
-  };
-};
 
 export interface PendingPromise<T> extends Promise<T> {
   status: "pending",
@@ -175,7 +101,6 @@ export type Api<T, R, A extends unknown[]> = {
   evict(...args: A): Api<T, R, A>;
   getState(...args: A): State<T, R, A>;
   useState(...args: A): State<T, R, A>;
-  inject(fn: (...args: A) => T | Promise<T>, options?: ApiOptions<T, R, A>): Api<T, R, A>;
   subscribe(cb: (t: T | Promise<T> | any) => void): () => void;
 };
 
@@ -188,14 +113,11 @@ declare global {
   }
 }
 
-export type ProviderProps<T extends DefaultShape> = {
-  shape?: T;
-  app?: Application<T>;
+export type ProviderProps = {
   children: React.ReactNode;
   cache?: InternalApiCacheType<any, any, any>;
 };
 
-export type AppContextType<T extends DefaultShape> = {
+export type AppContextType = {
   cache: InternalApiCacheType<any, any, any>
-  app?: Application<T>;
 };

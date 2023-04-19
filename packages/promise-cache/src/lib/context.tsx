@@ -1,29 +1,25 @@
 import * as React from "react";
 import {
   AppContextType,
-  DefaultShape,
   InternalApiCacheType,
   ProviderProps
 } from "../types";
 import {isServer} from "../utils";
 
 export const PromiseCacheContext =
-  React.createContext<AppContextType<any> | null>(null);
+  React.createContext<AppContextType | null>(null);
 
-export function AppProvider<T extends DefaultShape>({
+export function AppProvider({
   children,
-  shape,
   cache,
-  app,
-}: ProviderProps<T>) {
+}: ProviderProps) {
   let self = React.useMemo(() => {
     let cacheToUse = cache || new Map();
 
     return {
-      app,
       cache: cacheToUse,
     };
-  }, [app, shape, cache]);
+  }, [cache]);
 
   return (
     <PromiseCacheContext.Provider value={self}>
