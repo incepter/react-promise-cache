@@ -34,7 +34,7 @@ describe('should hydrate async states', () => {
     const originalConsoleError = console.error;
     console.error = () => {}
 
-    let hydrationScript = 'window.__HYDRATED_APP_CACHE__ = Object.assign(window.__HYDRATED_APP_CACHE__ || {}, {"fn":{"[1]":{"data":1,"args":[1],"status":"fulfilled","hydrated":true},"[2]":{"data":2,"args":[2],"status":"rejected","hydrated":true}},"fn2":{"[2]":{"data":2,"args":[2],"status":"fulfilled","hydrated":true}}})'
+    let hydrationScript = 'window.__HYDRATED_APP_CACHE__ = Object.assign(window.__HYDRATED_APP_CACHE__ || {}, {"fn":{"[1]":{"data":1,"args":[1],"status":"fulfilled"},"[2]":{"data":2,"args":[2],"status":"rejected"}},"fn2":{"[2]":{"data":2,"args":[2],"status":"fulfilled"}}})'
     const fn = (id) => Promise.resolve(8787);
     const fn2 = (id) => Promise.resolve(9898);
 
@@ -80,7 +80,7 @@ describe('should hydrate async states', () => {
   });
   it('should not boot from hydration when it is not present for its id', async () => {
     // given
-    let hydrationScript = 'window.__HYDRATED_APP_CACHE__ = Object.assign(window.__HYDRATED_APP_CACHE__ || {}, {"fn":{"[1]":{"data":1,"args":[1],"status":"fulfilled","hydrated":true},"[2]":{"data":2,"args":[2],"status":"fulfilled","hydrated":true}},"fn2":{"[2]":{"data":2,"args":[2],"status":"fulfilled","hydrated":true}}})'
+    let hydrationScript = 'window.__HYDRATED_APP_CACHE__ = Object.assign(window.__HYDRATED_APP_CACHE__ || {}, {"fn":{"[1]":{"data":1,"args":[1],"status":"fulfilled"},"[2]":{"data":2,"args":[2],"status":"fulfilled"}},"fn2":{"[2]":{"data":2,"args":[2],"status":"fulfilled"}}})'
     const fn = (id) => Promise.resolve(8787);
 
     function Component() {
@@ -110,7 +110,7 @@ describe('should hydrate async states', () => {
   });
   it('should rehydrate due to some streaming html event', async () => {
     // given
-    let hydrationScript = 'window.__HYDRATED_APP_CACHE__ = Object.assign(window.__HYDRATED_APP_CACHE__ || {}, {"fn":{"[1]":{"data":1,"args":[1],"status":"fulfilled","hydrated":true},"[2]":{"data":2,"args":[2],"status":"fulfilled","hydrated":true}},"fn2":{"[2]":{"data":2,"args":[2],"status":"fulfilled","hydrated":true}}})'
+    let hydrationScript = 'window.__HYDRATED_APP_CACHE__ = Object.assign(window.__HYDRATED_APP_CACHE__ || {}, {"fn":{"[1]":{"data":1,"args":[1],"status":"fulfilled"},"[2]":{"data":2,"args":[2],"status":"fulfilled"}},"fn2":{"[2]":{"data":2,"args":[2],"status":"fulfilled"}}})'
     const fn = (id) => Promise.resolve(8787);
 
     function Component() {

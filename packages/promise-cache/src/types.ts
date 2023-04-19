@@ -1,6 +1,6 @@
 import * as React from "react";
 
-export type Producer<T, A extends unknown[]> = (...args: A) => T | Promise<T>;
+export type Producer<T, A extends unknown[]> = (...args: A) => Promise<T>;
 
 export type InternalApiCacheValue<T, R, A extends unknown[]> = {
   name: string;
@@ -28,7 +28,7 @@ export type CacheConfig<T, R, A extends unknown[], Hash = string> = {
   // and then it will create another one again! this may lead to infinite loops
   // we may add a count of the sequential failures or decisions not to cache, so
   // retry can be implemented just using that.
-  // todo: maybe later!
+  // /!\: maybe later!
   // cache?(s: ResolvedState<T, R, A>): boolean;
   // the deadline after which a state that will be cached will become stale
   // and thus would be automatically evicted
@@ -75,7 +75,6 @@ export type SuccessState<T, A extends unknown[]> = {
   data: T;
   status: "fulfilled";
   promise: Promise<T>;
-  hydrated?: true;
 };
 export type ErrorState<T, R, A extends unknown[]> = {
   args: A;
