@@ -1,6 +1,6 @@
 import * as React from "react";
 import {act, fireEvent, render, screen} from "@testing-library/react";
-import {SuspenseBoundary} from "../lib/Hydration";
+import {SuspenseBoundary} from "../lib/hydration";
 import {useApi} from "../lib/api";
 import {flushPromises} from "./testUtils";
 import {beforeEach} from "@jest/globals";

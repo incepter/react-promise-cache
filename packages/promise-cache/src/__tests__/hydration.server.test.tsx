@@ -1,6 +1,6 @@
 import * as React from "react";
 import {render, screen, act} from "@testing-library/react";
-import {Hydration, SuspenseBoundary} from "../lib/Hydration";
+import {Hydration, SuspenseBoundary} from "../lib/hydration";
 import {useApi} from "../lib/api";
 import {AppProvider} from "../lib/context";
 import {flushPromises} from "./testUtils";
