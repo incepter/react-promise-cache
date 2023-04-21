@@ -5,6 +5,7 @@ import {getOrCreateApi, useApi} from "../lib/api";
 import {AppProvider} from "../lib/context";
 import {fireEvent} from "@testing-library/dom";
 import TestErrorBoundary from "./err-boundary";
+import {Api} from "../types";
 
 let userSearch = async () => Promise.resolve({id: 15, name: "incepter"});
 
@@ -28,26 +29,6 @@ describe("useApi tests", () => {
     expect(screen.getByTestId("pending").innerHTML).toBe("pending");
     await act(async () => await flushPromises());
     expect(screen.getByTestId("data").innerHTML).toBe("incepter");
-  });
-  it("should call useAPI with basic sync form", async () => {
-    const syncStuff = (id: number) => id;
-
-    function Component() {
-      let api = useApi(syncStuff);
-      let data = api.useState(14);
-      // @ts-ignore
-      return <span data-testid="data">{data.data}</span>;
-    }
-
-    render(
-      <React.StrictMode>
-        <AppProvider>
-          <Component/>
-        </AppProvider>
-      </React.StrictMode>
-    );
-    await act(async () => await flushPromises());
-    expect(screen.getByTestId("data").innerHTML).toBe("14");
   });
   it("should call useAPI and treat a rejection", async () => {
     const originalConsoleError = console.error;
@@ -82,7 +63,7 @@ describe("useApi tests", () => {
     let savedApi;
 
     function Component() {
-      let api = useApi(spy);
+      let api = useApi(spy) as Api<{id: string, name: string} , any, any>;
       savedApi = api;
       let data = api.use();
 
@@ -144,7 +125,7 @@ describe("useApi tests", () => {
     const spy = jest.fn().mockImplementation(testFn);
 
     function Component() {
-      let api = useApi(spy);
+      let api = useApi(spy) as Api<string , any, any>;
       let data = api.use("component - 1");
       return <span data-testid="component1">{data}</span>
     }
@@ -202,7 +183,7 @@ describe("useApi tests", () => {
     const spy = jest.fn().mockImplementation(testFn);
 
     function Component() {
-      let api = useApi(spy);
+      let api = useApi<string, Error, [string]>(spy);
       let data = api.getState("component - 1");
       if (data.status === "pending") {
         throw data.promise;
@@ -266,7 +247,7 @@ describe("useApi tests", () => {
     const spy = jest.fn().mockImplementation(testFn);
 
     function Component() {
-      let api = useApi(spy);
+      let api = useApi<string, Error, [string]>(spy);
       let data = api.use("component - 1");
       let rerender = React.useState({})[1];
       React.useEffect(() => api.subscribe(rerender), [api]);
@@ -329,7 +310,7 @@ describe("useApi tests", () => {
     const cache = new Map();
 
     function Component() {
-      let api = getOrCreateApi(spy, cache, {name: "test"});
+      let api = getOrCreateApi<string, Error, [string]>(spy, cache, {name: "test"});
       let data = api.useState("component - 1");
 
       if (data.status === "pending") {

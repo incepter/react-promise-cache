@@ -68,11 +68,7 @@ function transformForHydratedCallsCache(
   calls: Map<string, State<any, any, any>>
 ) {
   return [...calls.entries()].reduce((acc, curr) => {
-    // if (curr[1].hydrated) {
-    // 	return acc;
-    // }
     let {promise, ...rest} = curr[1];
-    curr[1].hydrated = true;
     acc[curr[0]] = rest;
     return acc;
   }, {});

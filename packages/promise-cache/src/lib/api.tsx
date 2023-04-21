@@ -16,7 +16,7 @@ import {useCache} from "./context";
 
 
 export function useApi<T, R, A extends unknown[]>(
-  create: (...args: A) => T | Promise<T>,
+  create: Producer<T, A>,
   options?: ApiOptions<T, R, A>,
 ) {
   let cache = useCache<T, R, A>();
@@ -94,7 +94,7 @@ export function getOrCreateApi<T, R, A extends unknown[]>(
     if (isCacheEnabled && cachedFunctionCalls.has(callHash)) {
       let cacheData = cachedFunctionCalls.get(callHash)!;
       // either with a promise or sync state
-      return cacheData.promise ? cacheData.promise : cacheData;
+      return cacheData.promise;
     }
 
     // if cache is not enabled, cache until next run occurs
@@ -105,15 +105,10 @@ export function getOrCreateApi<T, R, A extends unknown[]>(
     if (result && isPromise(result)) {
       trackPromise(functionCache, result, callHash, args, options?.cacheConfig);
     } else {
-      // sync, no promise involved, mostly useReducer or useState
-      cachedFunctionCalls.set(
-        callHash,
-        {data: result, args, status: "fulfilled"} as SuccessState<T, A>
-      );
-      notifyListeners(functionCache.listeners);
+      throw new Error("Producer result isn't a promise. This is not supported");
     }
     let cacheData = cachedFunctionCalls.get(callHash)!;
-    return cacheData.promise ? cacheData.promise : cacheData;
+    return cacheData.promise;
   }
 
   apiToken.evict = function evict(...args: A) {
@@ -134,7 +129,7 @@ export function getOrCreateApi<T, R, A extends unknown[]>(
     return apiToken;
   };
 
-  apiToken.use = function use(...args: A) {
+  apiToken.use = function use(...args: A): T {
     return useImpl(apiToken.apply(null, args));
   };
 

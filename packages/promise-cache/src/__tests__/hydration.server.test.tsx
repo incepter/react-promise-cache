@@ -87,6 +87,6 @@ describe('should hydrate correctly all cache', () => {
     )
     await act(async () => await flushPromises());
     expect(screen.getByTestId("parent").innerHTML).toEqual(
-      '<script id="test">window.__HYDRATED_APP_CACHE__ = Object.assign(window.__HYDRATED_APP_CACHE__ || {}, {"fn":{"[1]":{"data":1,"args":[1],"status":"fulfilled","hydrated":true},"[2]":{"data":2,"args":[2],"status":"fulfilled","hydrated":true}},"fn2":{"[2]":{"data":2,"args":[2],"status":"fulfilled","hydrated":true}}})</script>');
+      '<script id="test">window.__HYDRATED_APP_CACHE__ = Object.assign(window.__HYDRATED_APP_CACHE__ || {}, {"fn":{"[1]":{"data":1,"args":[1],"status":"fulfilled"},"[2]":{"data":2,"args":[2],"status":"fulfilled"}},"fn2":{"[2]":{"data":2,"args":[2],"status":"fulfilled"}}})</script>');
   });
 });
