@@ -1,11 +1,10 @@
 # React promise cache
 
 
-## The Api
+## The API
 
-`react-promise-cache` let you cache promises and their data, it works the same
-way in the client and the server. It uses `react-18` features and will target
-the future of react.
+`React-promise-cache` enables you to cache promises and their associated data. This caching functionality operates uniformly on both the client and server sides. The library utilizes React-18 capabilities and is aimed towards the forthcoming advancements in React.
+
 
 ## Simple Usage:
 
